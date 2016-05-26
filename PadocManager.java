@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.IntentFilter;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.util.Pair;
 
 import com.react.gabriel.wbam.MainActivity;
 import com.react.gabriel.wbam.padoc.bluetooth.BluetoothManager;
@@ -39,8 +40,11 @@ public class PadocManager {
     private WifiDirectManager wdManager;
     private IntentFilter wdIntentFilter;
 
-    //Set containing address running PADOC
+    //Set containing addresses running PADOC
     private Set<String> padocReadyDevices = new HashSet<String>();
+
+    //Set containing peers addresses (first) and names (second) in the network
+    private Set<Pair<String, String>> padocPeers = new HashSet<Pair<String, String>>();
 
     public PadocManager(MainActivity mActivity) {
 
@@ -138,6 +142,20 @@ public class PadocManager {
 
     public boolean verifyPadocAddress(String address){
         return padocReadyDevices.contains(address);
+    }
+
+    public String[] getPeers(){
+
+        Set<String> peers = mRouter.getPeers();
+
+        String[] array = new String[peers.size()];
+
+        return peers.toArray(array);
+    }
+
+    public void sendMsg(String address){
+        String msg = "Hello from " + localBluetoothAddress;
+        mMessenger.sendMsg(msg, address);
     }
 
     //Debug functions

@@ -2,7 +2,6 @@ package com.react.gabriel.wbam.padoc;
 
 import android.util.Pair;
 
-import com.react.gabriel.wbam.padoc.bluetooth.BluetoothManager;
 import com.react.gabriel.wbam.padoc.bluetooth.ConnectedThread;
 
 import java.util.Collection;
@@ -21,10 +20,12 @@ public class Router {
 
     //here are the devices that connected through the server thread and still need to be identified
     private Set<ConnectedThread> orphanDevices = null;
-    //connectedDevices<macAddress, connectedThread>
+    //connectedDevices<macAddress, connectedThread> These are the devices directly connected to us
     private Map<String, ConnectedThread> connectedDevices = null;
     //route<destinationAddress, <hops, routingAddress>>
     private Map<String, Pair<Integer, String>> route = null;
+    //peers<String, String>
+    private Map<String, String> peers = new HashMap<String, String>();
 
     public Router(String localAddress){
 
@@ -98,6 +99,10 @@ public class Router {
 
     public Set<Map.Entry<String, Pair<Integer, String>>> getKnownPeers(){
         return route.entrySet();
+    }
+
+    public Set<String> getPeers(){
+        return route.keySet();
     }
 
     public String getRoutingAddressFor(String address){
