@@ -12,3 +12,4 @@ This is the ReadMe file for the Padoc library for Android
 * Detect when bluetooth pairing/connection did not work. (out of reach, etc)
 * Sometimes the server socket is null and crashes (listenusingrfcommwithservicerecord returns null)
 * Implement connection when the other device is already paired
+* Try connections without bluetooth discovery
