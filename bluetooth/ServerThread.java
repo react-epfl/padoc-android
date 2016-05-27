@@ -46,7 +46,11 @@ public class ServerThread extends Thread {
         while (n<4) {
             mActivity.debugPrint("Waiting for client #" + n);
             try {
-                socket = mmServerSocket.accept();
+                if(mmServerSocket != null){
+                    socket = mmServerSocket.accept();
+                }else {
+                    mActivity.debugPrint("ERROR : The server socket is null.");
+                }
             } catch (IOException e) {
                 break;
             }

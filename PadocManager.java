@@ -18,9 +18,6 @@ import java.util.Set;
  */
 public class PadocManager {
 
-    private String BLUE = "28:27:BF:3A:4A:8A";
-    private String WHITE = "28:27:BF:3A:2E:54";
-    private String GALAXY = "54:40:AD:BC:6C:3B";
     private String ALL = "ALL";
 
     private boolean DBG = true;
@@ -154,7 +151,7 @@ public class PadocManager {
     }
 
     public void sendMsg(String address){
-        String msg = "Hello from " + localBluetoothAddress;
+        String msg = "Hello World";
         mMessenger.sendMsg(msg, address);
     }
 
@@ -165,18 +162,6 @@ public class PadocManager {
     }
 
     //Temporary functions
-
-    public void sendMsgToWhite(String msg){
-        mMessenger.sendMsg(msg, WHITE);
-    }
-
-    public void sendMsgToBlue(String msg){
-        mMessenger.sendMsg(msg, BLUE);
-    }
-
-    public void sendMsgToGalaxy(String msg){
-        mMessenger.sendMsg(msg, GALAXY);
-    }
 
     public void sendCBS(){
         mMessenger.sendMsg("Hallo CBS", ALL);
