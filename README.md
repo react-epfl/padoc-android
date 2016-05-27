@@ -8,4 +8,5 @@ This is the ReadMe file for the Padoc library for Android
 * Create general functions that automate the multiple necessary steps to join a mesh, or even to start scanning properly, etc.
 * Integrate peers names and make them available.
 * Detect deconnections!
-* Implement priority peers
+* Implement priority peers/leaf nodes.
+* Detect when bluetooth pairing/connection did not work. (out of reach, etc)
