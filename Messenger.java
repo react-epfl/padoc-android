@@ -46,14 +46,13 @@ public class Messenger {
         switch (algo){
 
             case CBS:
-                //TODO : CBS stuff
 
                 String msgID = jsonMsg.getUUID();
 
                 if(!cbsMsgTracker.containsKey(msgID)){
                     //First time we get this msg, initialize counter to one.
 
-                    mActivity.debugPrint("Got unknown CBS");
+                    mActivity.debugPrint("Got CBS");
                     Set sources = new HashSet();
                     sources.add(fromThread.getRemoteAddress());
 
@@ -107,14 +106,11 @@ public class Messenger {
 
                         int hops = jsonMsg.getHops();
 
-                        mActivity.debugPrint("jsonMsg:"+jsonMsg.toString());
                         if(fromThread.isOrphan() && hops == 0 && sourceAddress.equals(newAddress)){
                             //ID msg is original (not a forward)
 
-                            mActivity.debugPrint("knows it?"+mRouter.knows(newAddress));
                             mRouter.identifyOrphanThread(fromThread, newAddress);
-                            mActivity.debugPrint("Saved Original");
-                            mActivity.debugPrint("knows it?"+mRouter.knows(newAddress));
+                            mActivity.debugPrint("Saved original ID");
 
                             //Because the peer is new we should greet him with the necessary info
                             sendMeshInfoTo(newAddress);
@@ -128,7 +124,7 @@ public class Messenger {
 
                             //If we don't have this address registered yet, or if we do but this route is shorter, save it and broadcast.
                             mRouter.setRoute(newAddress, hops, fromThread.getRemoteAddress());
-                            mActivity.debugPrint("Saved Route");
+                            mActivity.debugPrint("Saved ID route");
 
                             if(jsonMsg.getDestination().equals(ALL)){
                                 forwardBroadcastIDMsg(jsonMsg, fromThread.getRemoteAddress());
@@ -206,7 +202,6 @@ public class Messenger {
 
         String destination = jsonMsg.getDestination();
         if(mRouter.knows(destination)){
-            //TODO
             jsonMsg.incrementHop();
             mRouter.getRoutingThreadFor(destination).write(jsonMsg);
 
@@ -216,7 +211,6 @@ public class Messenger {
     }
 
     public void sendMsg(String msg, String destination){
-        //TODO : Completely
 
         if(destination.equals(ALL)){
 

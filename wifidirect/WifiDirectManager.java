@@ -3,13 +3,11 @@ package com.react.gabriel.wbam.padoc.wifidirect;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pManager;
 
 import com.react.gabriel.wbam.MainActivity;
 import com.react.gabriel.wbam.padoc.PadocManager;
-
-import java.util.Map;
 
 /**
  * Created by gabriel on 25/05/16.
@@ -18,9 +16,10 @@ public class WifiDirectManager extends BroadcastReceiver {
 
     public static final String BTMAC = "btmac";
 
+    private boolean isRunning = false;
     private final MainActivity mActivity;
     private PadocManager padocManager;
-    private final WifiP2pManager mManager;
+    private final WifiManager wifiManager;
     private final WifiDirectService wdService;
     private final WifiDirectDiscovery wdDiscovery;
 
@@ -30,9 +29,31 @@ public class WifiDirectManager extends BroadcastReceiver {
 
         this.mActivity = mActivity;
         this.padocManager = padocManager;
-        this.mManager = (WifiP2pManager) mActivity.getSystemService(Context.WIFI_P2P_SERVICE);
-        this.wdService = new WifiDirectService(mActivity);
-        this.wdDiscovery = new WifiDirectDiscovery(mActivity, this);
+
+        this.wifiManager = (WifiManager) mActivity.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+
+        if (wifiManager == null) {
+            //Device does not support Wi-Fi
+
+            mActivity.debugPrint("ERROR : Device does not support Wi-Fi.");
+            this.wdService = null;
+            this.wdDiscovery = null;
+
+        }else {
+            //Device supports Wi-Fi
+
+            //Make sure Wifi-Direct is on
+            this.wifiManager.setWifiEnabled(true);
+
+            //Initialize the service object
+            this.wdService = new WifiDirectService(mActivity);
+
+            //Initialize the discovery object
+            this.wdDiscovery = new WifiDirectDiscovery(mActivity, this);
+
+            this.isRunning = true;
+        }
+
 
     }
 
@@ -56,16 +77,8 @@ public class WifiDirectManager extends BroadcastReceiver {
                 // Wi-Fi P2P is not enabled
                 mActivity.debugPrint("Error: WiFi-Direct DISABLED");
                 wifiDirectEnabled = false;
-                //TODO: Need to enable WiFi. and maybe change AMAPisON?
             }
         }
-    }
-
-    public void handleNewAMAPDevice(WifiP2pDevice device, Map record){
-        //TODO: can I send a BluetoothDevice object through the record? I think yes.
-
-        //And connect to the device if chosen
-
     }
 
     public void startService() {
@@ -90,6 +103,13 @@ public class WifiDirectManager extends BroadcastReceiver {
     }
 
     public void handleNewWifiDirectDiscovery(String btMacAddress){
+        //TODO : Need to try connecting directly with the btMacAddress, without bluetooth discovery
         padocManager.registerNewBluetoothAddress(btMacAddress);
+    }
+
+    //Getters
+
+    public boolean isRunning(){
+        return this.isRunning;
     }
 }

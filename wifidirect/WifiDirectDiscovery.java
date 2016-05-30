@@ -32,16 +32,16 @@ public class WifiDirectDiscovery {
 
     }
 
-    //AMAP Scan handler
+    //Scanner handler
     private Handler discoveryHandler = new Handler();
     //TODO: This number shouldn't be a constant.
     private final int DELAY = 5000;
 
-    //AMAP Scan runnable
+    //Scanner runnable
     private Runnable runDiscovery = new Runnable() {
         @Override
         public void run() {
-            scanOnceForAMAP();
+            scanOnce();
             discoveryHandler.postDelayed(this, DELAY);
         }
     };
@@ -51,17 +51,17 @@ public class WifiDirectDiscovery {
 //            runDiscovery.run();
             discoveryIsRunning = true;
             mActivity.debugPrint("Started Service discovery");
-            scanOnceForAMAP();
+            scanOnce();
             discoveryHandler.postDelayed(runDiscovery, DELAY);
         }else{
-            mActivity.debugPrint("Error: AMAP Discovery is already running");
+            mActivity.debugPrint("Error: Discovery is already running");
         }
     }
 
     /**
      * Remember to call mManager.clearServiceRequest() before calling this function
      */
-    public void scanOnceForAMAP() {
+    public void scanOnce() {
 
         mManager.clearServiceRequests(mChannel, null);
 
@@ -71,7 +71,7 @@ public class WifiDirectDiscovery {
                 //TODO: handle discovered devices
                 mActivity.debugPrint("Discovered : " + device.deviceName);
 //                if (DBG) mActivity.debugPrint("ssid : " + record.get("ssid"));
-                if(record.get(WifiDirectManager.BTMAC)!=null){
+                if(fullDomain.contains("padoc") && record.get(WifiDirectManager.BTMAC)!=null){
 //                    if (DBG) mActivity.debugPrint("Attempting connection to : " + record.get("ssid") + "|"+record.get("key"));
 
                     wdManager.handleNewWifiDirectDiscovery((String)record.get(WifiDirectManager.BTMAC));
@@ -112,7 +112,7 @@ public class WifiDirectDiscovery {
     }
 
     /**
-     * When using a custom actionListener do not forget to set AMAPDiscoveryON
+     * When using a custom actionListener do not forget to set discoveryIsRunning
      * @param actionListener
      */
     public void stopDiscovery(WifiP2pManager.ActionListener actionListener) {

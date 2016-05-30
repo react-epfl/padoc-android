@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
+import com.google.gson.Gson;
 import com.react.gabriel.wbam.padoc.JsonMsg;
 import com.react.gabriel.wbam.MainActivity;
 import com.react.gabriel.wbam.padoc.Messenger;
@@ -16,12 +17,14 @@ import com.react.gabriel.wbam.padoc.Router;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Created by gabriel on 03/05/16.
  */
 public class BluetoothManager extends BroadcastReceiver{
 
+    private boolean isRunning = false;
     private final MainActivity mActivity;
     private final PadocManager padocManager;
     private final BluetoothAdapter btAdapter;
@@ -39,7 +42,7 @@ public class BluetoothManager extends BroadcastReceiver{
     //Server
     private ServerThread serverThread = null;
 
-    private BluetoothDevice connectingToDevice = null;
+    private BluetoothDevice pairingDevicePriorToConnection = null;
 
     public BluetoothManager(MainActivity activity, PadocManager padocManager){
 
@@ -47,25 +50,38 @@ public class BluetoothManager extends BroadcastReceiver{
         this.padocManager = padocManager;
 
         this.btAdapter = BluetoothAdapter.getDefaultAdapter();
+
         if(btAdapter == null){
             //Device does not support Bluetooth
+
             mActivity.debugPrint("Device does not support Bluetooth.");
             this.localAddress = null;
             this.btDiscovery = null;
 
         }else {
+            //Device supports bluetooth
+
+            //Make sure Bluetooth is on
             btAdapter.enable();
+
+            //Set the local MAC Bluetooth address
             this.localAddress = btAdapter.getAddress();
 
             mActivity.debugPrint("This device is " + localAddress);
 
+            //Initialize the discovery object
             this.btDiscovery = new BluetoothDiscovery(mActivity, btAdapter);
+
+            //Initialize the server thread
             this.serverThread = new ServerThread(mActivity, this, btAdapter);
+
             //TODO I should use these sometime and filter only WBAM paired devices
             this.pairedDevices = btAdapter.getBondedDevices();
             if(pairedDevices.size() > 0){
                 mActivity.debugPrint("Found " + pairedDevices.size() + " paired BT devices");
             }
+
+            this.isRunning = true;
         }
     }
 
@@ -162,9 +178,8 @@ public class BluetoothManager extends BroadcastReceiver{
 
     public void unpairDevices(){
         for(BluetoothDevice btDevice : btAdapter.getBondedDevices()){
-            if(btDevice.getName().contains("WHITE") || btDevice.getName().contains("BLUE") || btDevice.getName().contains("Galaxy")){
-                unpairDevice(btDevice);
-            }
+            //For now... unpair all devices
+            unpairDevice(btDevice);
         }
     }
 
@@ -195,7 +210,7 @@ public class BluetoothManager extends BroadcastReceiver{
 
             if (state == BluetoothDevice.BOND_BONDED && prevState == BluetoothDevice.BOND_BONDING) {
                 mActivity.debugPrint("Paired " + btDevice.getName());
-                if(connectingToDevice != null && connectingToDevice.equals(btDevice)){
+                if(pairingDevicePriorToConnection != null && pairingDevicePriorToConnection.equals(btDevice)){
                     connectTo(btDevice);
                 }
 
@@ -262,41 +277,33 @@ public class BluetoothManager extends BroadcastReceiver{
 
         mActivity.debugPrint("Discovered : " + btDevice.getName());
 
-//        Gson gson = new Gson();
-//        String btDeviceString = gson.toJson(btDevice);
-//        mActivity.debugPrint("gson : " + btDeviceString);
-//
-//        BluetoothDevice btD = gson.fromJson(btDeviceString, BluetoothDevice.class);
-//        mActivity.debugPrint(btD.toString());
-//
-//        String fakeS = "{\"mAddress\":\"11:22:33:44:55:66\"}";
-//        BluetoothDevice fakeD = gson.fromJson(fakeS, BluetoothDevice.class);
-//        mActivity.debugPrint(fakeD.toString());
-//        String fakeS2 = gson.toJson(fakeD);
-//        mActivity.debugPrint("rebuild:"+fakeS2);
-
-        //TODO recognize WBAM devices
-
         String btAddress = btDevice.getAddress();
         if(padocManager.verifyPadocAddress(btAddress)){
 
             //Attempting connection to WHITE
-            connectingToDevice = btDevice;
+            pairingDevicePriorToConnection = btDevice;
             //Stop discovery
             stopDiscovery();
             //Pair with WHITE
             pairDevice(btDevice);
         }
 
-//        if(btDevice.getName() != null && (btDevice.getName().contains("WHITE") || btDevice.getName().contains("BLUE") || btDevice.getName().contains("Galaxy"))){
-//
-//            //Attempting connection to WHITE
-//            connectingToDevice = btDevice;
-//            //Stop discovery
-//            stopDiscovery();
-//            //Pair with WHITE
-//            pairDevice(btDevice);
-//        }
+    }
+
+    public void handleNewDiscoveryFromWifiDirect(String btMacAddress){
+
+        Gson gson = new Gson();
+
+        String jsonString = "{\"mAddress\":\"" + btMacAddress + "\"}";
+        BluetoothDevice btDevice = gson.fromJson(jsonString, BluetoothDevice.class);
+
+        if(pairedDevices.contains(btDevice)) {
+            connectTo(btDevice);
+        }else {
+            pairingDevicePriorToConnection = btDevice;
+            pairDevice(btDevice);
+        }
+
     }
 
     public String getLocalAddress(){
@@ -333,5 +340,13 @@ public class BluetoothManager extends BroadcastReceiver{
     //Getters
     public String getLocalBluetoothAddress(){
         return this.localAddress;
+    }
+
+    public boolean isRunning(){
+        return this.isRunning;
+    }
+
+    public UUID getPadocUUID(){
+        return padocManager.getPadocUUID();
     }
 }

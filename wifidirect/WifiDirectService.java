@@ -30,7 +30,7 @@ public class WifiDirectService {
     }
 
     /**
-     * When specifying custom actionListener, do not forget to set AMAPServiceON
+     * When specifying custom actionListener, do not forget to set serviceIsRunning
      * @param actionListener
      */
     public void startService(String btMAC, WifiP2pManager.ActionListener actionListener) {
@@ -63,7 +63,7 @@ public class WifiDirectService {
     }
 
     /**
-     * When using a custom actionListener do not forget to set AMAPServiceON
+     * When using a custom actionListener do not forget to set serviceIsRunning
      * @param actionListener
      */
     public void stopService(WifiP2pManager.ActionListener actionListener) {

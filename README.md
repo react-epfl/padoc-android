@@ -15,3 +15,4 @@ This is the ReadMe file for the Padoc library for Android
 * Try connections without bluetooth discovery
 * Turn Wifi on automatically
 * Get Bluetooth and Wifi status when starting
+* Remove time limit on Wifi-Direct discovery

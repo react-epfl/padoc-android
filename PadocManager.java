@@ -12,12 +12,15 @@ import com.react.gabriel.wbam.padoc.wifidirect.WifiDirectManager;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Created by gabriel on 25/05/16.
  */
 public class PadocManager {
 
+    private final UUID PADOC_UUID = UUID.fromString("aa40d6d0-16b0-11e6-bdf4-0800200c9a66");
+    private final int MIN_RECOMMENDED_CONNECTIONS = 1;
     private String ALL = "ALL";
 
     private boolean DBG = true;
@@ -65,6 +68,7 @@ public class PadocManager {
         btIntentFilter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
         btIntentFilter.addAction(BluetoothDevice.ACTION_PAIRING_REQUEST);
 
+        //TODO : registerReceiver, here or in onResume()
         mActivity.registerReceiver(btManager, btIntentFilter);
 
         //WifiDirect
@@ -76,6 +80,44 @@ public class PadocManager {
 
         mActivity.registerReceiver(wdManager, wdIntentFilter);
 
+        initialize();
+
+    }
+
+    //PADOC functions
+
+    public void initialize(){
+
+        if(btManager.isRunning() && wdManager.isRunning()){
+            //BluetoothManager and WifiDirectManager initialized correctly
+
+            //Start Bluetooth server
+            btManager.startServer();
+
+            //Start Wifi-Direct service
+            wdManager.startService();
+
+            //Start Wifi-Direct scan
+            wdManager.startDiscovery();
+
+        }
+
+        //Turn on if off
+
+        //Check Wifi-Direct status
+
+        //Turn on if off
+
+        //Start bluetooth server
+
+        //Start Wifi-Direct scan
+
+        //Start bluetooth scan
+
+    }
+
+    public boolean verifyPadocAddress(String address){
+        return padocReadyDevices.contains(address);
     }
 
     //Bluetooth functions
@@ -131,14 +173,20 @@ public class PadocManager {
     }
 
     public void registerNewBluetoothAddress(String btAddress){
+        //Called when a new Padoc device is discovered through Wifi-Direct
+
         padocReadyDevices.add(btAddress);
         //TODO : if this is the first addition to the set, start bluetooth discovery.
-    }
 
-    //PADOC functions
+        if(mRouter.numberOfActiveConnections() < MIN_RECOMMENDED_CONNECTIONS){
+            //We still don't have the minimum recommended number of connections.
+            //We should attempt a connection to this device.
 
-    public boolean verifyPadocAddress(String address){
-        return padocReadyDevices.contains(address);
+            btManager.handleNewDiscoveryFromWifiDirect(btAddress);
+        }else {
+            wdManager.stopDiscovery();
+        }
+
     }
 
     public String[] getPeers(){
@@ -165,5 +213,11 @@ public class PadocManager {
 
     public void sendCBS(){
         mMessenger.sendMsg("Hallo CBS", ALL);
+    }
+
+    //Getters
+
+    public UUID getPadocUUID(){
+        return this.PADOC_UUID;
     }
 }

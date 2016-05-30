@@ -11,8 +11,6 @@ import java.util.UUID;
  */
 public class ClientThread extends Thread {
 
-    private final UUID WBAM_BT_UUID = UUID.fromString("aa40d6d0-16b0-11e6-bdf4-0800200c9a66");
-
     private final BluetoothManager btManager;
     private final BluetoothSocket mmSocket;
     private final BluetoothDiscovery btDiscovery;
@@ -29,7 +27,7 @@ public class ClientThread extends Thread {
         // Get a BluetoothSocket to connect with the given BluetoothDevice
         try {
             // MY_UUID is the app's UUID string, also used by the server code
-            tmp = device.createRfcommSocketToServiceRecord(WBAM_BT_UUID);
+            tmp = device.createRfcommSocketToServiceRecord(btManager.getPadocUUID());
         } catch (IOException e) { }
         mmSocket = tmp;
     }

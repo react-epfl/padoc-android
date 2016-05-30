@@ -109,4 +109,8 @@ public class Router {
         return route.get(address).second;
     }
 
+    public int numberOfActiveConnections(){
+        return connectedDevices.size();
+    }
+
 }

@@ -7,34 +7,37 @@ import android.bluetooth.BluetoothSocket;
 import com.react.gabriel.wbam.MainActivity;
 
 import java.io.IOException;
-import java.util.UUID;
 
 /**
  * Created by gabriel on 18/05/16.
  */
 public class ServerThread extends Thread {
 
-    private final UUID WBAM_BT_UUID = UUID.fromString("aa40d6d0-16b0-11e6-bdf4-0800200c9a66");
-    private final String WBAM_BT_SERVICE = "WBAM_BT";
+    private final String PADOC_SERVICE = "padoc-service";
+    private final int maxClientsConnections = 7;
 
     private final MainActivity mActivity;
     private final BluetoothManager btManager;
-    private final BluetoothAdapter btAdapter;
     private final BluetoothServerSocket mmServerSocket;
 
     public ServerThread(MainActivity mActivity, BluetoothManager btManager, BluetoothAdapter btAdapter) {
 
         this.mActivity = mActivity;
         this.btManager = btManager;
-        this.btAdapter = btAdapter;
 
         // Use a temporary object that is later assigned to mmServerSocket,
         // because mmServerSocket is final
         BluetoothServerSocket tmp = null;
-        try {
-            // MY_UUID is the app's UUID string, also used by the client code
-            tmp = btAdapter.listenUsingRfcommWithServiceRecord(WBAM_BT_SERVICE, WBAM_BT_UUID);
-        } catch (IOException e) { }
+
+        while(tmp == null){
+            try {
+                // MY_UUID is the app's UUID string, also used by the client code
+                tmp = btAdapter.listenUsingRfcommWithServiceRecord(PADOC_SERVICE, btManager.getPadocUUID());
+            } catch (IOException e) {
+//                mActivity.debugPrint("Bluetooth Error! listenUsingRfcommWithServiceRecord failed. Reason:" + e);
+            }
+        }
+
         mmServerSocket = tmp;
     }
 
@@ -43,7 +46,7 @@ public class ServerThread extends Thread {
         BluetoothSocket socket = null;
         int n = 0;
         // Keep listening until 4 connections are accepted
-        while (n<4) {
+        while (n < maxClientsConnections) {
             mActivity.debugPrint("Waiting for client #" + n);
             try {
                 if(mmServerSocket != null){
