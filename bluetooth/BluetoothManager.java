@@ -24,12 +24,21 @@ import java.util.UUID;
  */
 public class BluetoothManager extends BroadcastReceiver{
 
-    private boolean isRunning = false;
+    public enum State {
+        STATE_NULL,
+        STATE_ADAPTER_STARTING,
+        STATE_ADAPTER_RUNNING,
+        STATE_SERVER_STARTING,
+        STATE_RUNNING;
+    }
+
+    private State state = State.STATE_NULL;
+
     private final MainActivity mActivity;
     private final PadocManager padocManager;
     private final BluetoothAdapter btAdapter;
     private final String localAddress;
-    private final BluetoothDiscovery btDiscovery;
+//    private final BluetoothDiscovery btDiscovery;
     private Messenger mMessenger;
     private Router mRouter;
 
@@ -56,13 +65,13 @@ public class BluetoothManager extends BroadcastReceiver{
 
             mActivity.debugPrint("Device does not support Bluetooth.");
             this.localAddress = null;
-            this.btDiscovery = null;
+//            this.btDiscovery = null;
 
         }else {
             //Device supports bluetooth
 
             //Make sure Bluetooth is on
-            btAdapter.enable();
+//            btAdapter.enable();
 
             //Set the local MAC Bluetooth address
             this.localAddress = btAdapter.getAddress();
@@ -70,10 +79,10 @@ public class BluetoothManager extends BroadcastReceiver{
             mActivity.debugPrint("This device is " + localAddress);
 
             //Initialize the discovery object
-            this.btDiscovery = new BluetoothDiscovery(mActivity, btAdapter);
+//            this.btDiscovery = new BluetoothDiscovery(mActivity, btAdapter);
 
             //Initialize the server thread
-            this.serverThread = new ServerThread(mActivity, this, btAdapter);
+//            this.serverThread = new ServerThread(mActivity, this, btAdapter);
 
             //TODO I should use these sometime and filter only WBAM paired devices
             this.pairedDevices = btAdapter.getBondedDevices();
@@ -81,105 +90,56 @@ public class BluetoothManager extends BroadcastReceiver{
                 mActivity.debugPrint("Found " + pairedDevices.size() + " paired BT devices");
             }
 
-            this.isRunning = true;
+//            this.isRunning = true;
         }
     }
 
-    public void startDiscovery(){
-        btDiscovery.startDiscovery();
-    }
+    public void initialize(){
 
-    public void stopDiscovery(){
-        btDiscovery.stopDiscovery();
-    }
+        switch (state){
+            case STATE_NULL :
 
-    public void startServer(){
-        //Do not use run(), it just runs the code, it does not create a new Thread
-        if(serverThread != null && !serverThread.isAlive()){
-            serverThread.start();
-        }
-    }
+                if(!btAdapter.isEnabled()){
 
-    public void stopServer(){
-        serverThread.cancel();
-    }
+                    if(btAdapter.enable()) this.state = State.STATE_ADAPTER_STARTING;
 
-    /**
-     * You should always ensure that the device is not performing device discovery when you call connect().
-     * If discovery is in progress, then the connection attempt will be significantly slowed and is more likely to fail.
-     * @param btDevice
-     */
-    public void connectTo(BluetoothDevice btDevice){
-        mActivity.debugPrint("Connecting to " + btDevice.getName());
-        (new ClientThread(this, btDevice, btDiscovery)).start();
-    }
+                }else {
+                    //TODO : check if a reset is necessary
 
-    /**
-     * By default, the device will become discoverable for 120 seconds.
-     * You can define a different duration by adding the EXTRA_DISCOVERABLE_DURATION Intent extra.
-     * The maximum duration an app can set is 3600 seconds, and a value of 0 means the device is
-     * always discoverable.
-     */
-    public void setVisible(){
-        if(!isVisible){
-            Method method;
-            try {
-                method = btAdapter.getClass().getMethod("setScanMode", int.class, int.class);
-                method.invoke(btAdapter, BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE, 0);
-                isVisible = true;
-                mActivity.debugPrint("BT is now visible");
-            }
-            catch (Exception e){
-                e.printStackTrace();
-            }
-        }else {
-            mActivity.debugPrint("Error : BT is already visible");
-        }
-    }
+                    this.state = State.STATE_ADAPTER_RUNNING;
+                    initialize();
+                }
 
-    //Done using reflection
-    //http://grepcode.com/file/repo1.maven.org/maven2/org.robolectric/android-all/5.0.0_r2-robolectric-0/android/bluetooth/BluetoothAdapter.java#BluetoothAdapter.setScanMode%28int%2Cint%29
-    public void setInvisible(){
-        if(isVisible){
-            Method method;
-            try {
-                method = btAdapter.getClass().getMethod("setScanMode", int.class);
-                method.invoke(btAdapter, BluetoothAdapter.SCAN_MODE_CONNECTABLE);
-                isVisible = false;
-                mActivity.debugPrint("BT is now hidden");
-            }
-            catch (Exception e){
-                e.printStackTrace();
-            }
-        } else {
-            mActivity.debugPrint("Error : BT is already hidden");
-        }
-    }
+                break;
+            case STATE_ADAPTER_STARTING :
 
-    private boolean pairDevice(BluetoothDevice device) {
-        try {
-            Method method = device.getClass().getMethod("createBond", (Class[]) null);
-            method.invoke(device, (Object[]) null);
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
+                mActivity.debugPrint("Bluetooth adapter is starting...");
 
-    private void unpairDevice(BluetoothDevice device) {
-        try {
-            Method method = device.getClass().getMethod("removeBond", (Class[]) null);
-            method.invoke(device, (Object[]) null);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+                break;
+            case STATE_ADAPTER_RUNNING :
 
-    public void unpairDevices(){
-        for(BluetoothDevice btDevice : btAdapter.getBondedDevices()){
-            //For now... unpair all devices
-            unpairDevice(btDevice);
+                state = State.STATE_SERVER_STARTING;
+                serverThread = new ServerThread(mActivity, this, btAdapter);
+
+                initialize();
+
+                break;
+            case STATE_SERVER_STARTING :
+
+                serverThread.start();
+
+                state = State.STATE_RUNNING;
+
+                padocManager.initialize();
+
+                break;
+            case STATE_RUNNING:
+
+                mActivity.debugPrint("Bluetooth server is running.");
+
+                padocManager.initialize();
+
+                break;
         }
     }
 
@@ -188,18 +148,45 @@ public class BluetoothManager extends BroadcastReceiver{
 
         String action = intent.getAction();
 
-        //When discovery finds a device
-        if(action.equals(BluetoothDevice.ACTION_FOUND)){
+
+        if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+            final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
+
+            switch(state) {
+                case BluetoothAdapter.STATE_OFF:
+                    mActivity.debugPrint("Bluetooth is OFF");
+                    break;
+                case BluetoothAdapter.STATE_TURNING_OFF:
+                    mActivity.debugPrint("Bluetooth is turning OFF");
+                    break;
+                case BluetoothAdapter.STATE_ON:
+                    mActivity.debugPrint("Bluetooth is ON");
+
+                    if(this.state.equals(State.STATE_ADAPTER_STARTING)){
+                        this.state = State.STATE_ADAPTER_RUNNING;
+                        initialize();
+                    }
+
+                    break;
+                case BluetoothAdapter.STATE_TURNING_ON:
+                    mActivity.debugPrint("Bluetooth is turning ON");
+                    break;
+            }
+
+        }else if(action.equals(BluetoothDevice.ACTION_FOUND)){
+            //When discovery finds a device
+/*
             //Get the Bluetooth device
             BluetoothDevice btDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+
             //The only thing needed to connect to a device is the MAC address
             if(btDevice != null) handleNewBTDiscovery(btDevice);
-
-        }else if (action.equals(BluetoothAdapter.ACTION_DISCOVERY_FINISHED))
-        {
+*/
+        }else if (action.equals(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)) {
             //Bluetooth discovery finished, relaunch?
+/*
             if(btDiscovery.discoveryIsRunning) btDiscovery.runDiscoveryOnce();
-
+*/
         }else if (action.equals(BluetoothDevice.ACTION_BOND_STATE_CHANGED)) {
 
             //Bluetooth pairing state changed.
@@ -242,6 +229,128 @@ public class BluetoothManager extends BroadcastReceiver{
         }
     }
 
+    //TODO : unnecessary
+//    public void startDiscovery(){
+//        btDiscovery.startDiscovery();
+//    }
+//
+//    //TODO : unnecessary
+//    public void stopDiscovery(){
+//        btDiscovery.stopDiscovery();
+//    }
+
+    public void startServer(){
+        //Do not use run(), it just runs the code, it does not create a new Thread
+        if(serverThread != null && !serverThread.isAlive()){
+            serverThread.start();
+        }
+    }
+
+    public void stopServer(){
+        serverThread.cancel();
+    }
+
+    /**
+     * You should always ensure that the device is not performing device discovery when you call connect().
+     * If discovery is in progress, then the connection attempt will be significantly slowed and is more likely to fail.
+     * @param btDevice
+     */
+    public void connectTo(BluetoothDevice btDevice){
+        mActivity.debugPrint("Connecting to " + btDevice.getName());
+        (new ClientThread(this, btDevice)).start();
+    }
+
+    //TODO : unnecessary
+    /**
+     * By default, the device will become discoverable for 120 seconds.
+     * You can define a different duration by adding the EXTRA_DISCOVERABLE_DURATION Intent extra.
+     * The maximum duration an app can set is 3600 seconds, and a value of 0 means the device is
+     * always discoverable.
+     */
+    public void setVisible(){
+        if(!isVisible){
+            Method method;
+            try {
+                method = btAdapter.getClass().getMethod("setScanMode", int.class, int.class);
+                method.invoke(btAdapter, BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE, 0);
+                isVisible = true;
+                mActivity.debugPrint("BT is now visible");
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
+        }else {
+            mActivity.debugPrint("Error : BT is already visible");
+        }
+    }
+
+    //TODO : unnecessary
+    //Done using reflection
+    //http://grepcode.com/file/repo1.maven.org/maven2/org.robolectric/android-all/5.0.0_r2-robolectric-0/android/bluetooth/BluetoothAdapter.java#BluetoothAdapter.setScanMode%28int%2Cint%29
+    public void setInvisible(){
+        if(isVisible){
+            Method method;
+            try {
+                method = btAdapter.getClass().getMethod("setScanMode", int.class);
+                method.invoke(btAdapter, BluetoothAdapter.SCAN_MODE_CONNECTABLE);
+                isVisible = false;
+                mActivity.debugPrint("BT is now hidden");
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
+        } else {
+            mActivity.debugPrint("Error : BT is already hidden");
+        }
+    }
+
+    private boolean pairDevice(BluetoothDevice device) {
+        try {
+            Method method = device.getClass().getMethod("createBond", (Class[]) null);
+            method.invoke(device, (Object[]) null);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    //TODO : unnecessary
+    private void unpairDevice(BluetoothDevice device) {
+        try {
+            Method method = device.getClass().getMethod("removeBond", (Class[]) null);
+            method.invoke(device, (Object[]) null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    //TODO : unnecessary
+    public void unpairDevices(){
+        for(BluetoothDevice btDevice : btAdapter.getBondedDevices()){
+            //For now... unpair all devices
+            unpairDevice(btDevice);
+        }
+    }
+
+    //TODO : unnecessary
+//    private void handleNewBTDiscovery(BluetoothDevice btDevice){
+//
+//        mActivity.debugPrint("Discovered : " + btDevice.getName());
+//
+//        String btAddress = btDevice.getAddress();
+//        if(padocManager.verifyPadocAddress(btAddress)){
+//
+//            //Attempting connection to WHITE
+//            pairingDevicePriorToConnection = btDevice;
+//            //Stop discovery
+//            stopDiscovery();
+//            //Pair with WHITE
+//            pairDevice(btDevice);
+//        }
+//
+//    }
+
     /**
      * Creates either an orphanThread if the connection comes from the serverThread
      * or a connectedThread if the connection comes from a clientThread
@@ -273,23 +382,6 @@ public class BluetoothManager extends BroadcastReceiver{
         }
     }
 
-    private void handleNewBTDiscovery(BluetoothDevice btDevice){
-
-        mActivity.debugPrint("Discovered : " + btDevice.getName());
-
-        String btAddress = btDevice.getAddress();
-        if(padocManager.verifyPadocAddress(btAddress)){
-
-            //Attempting connection to WHITE
-            pairingDevicePriorToConnection = btDevice;
-            //Stop discovery
-            stopDiscovery();
-            //Pair with WHITE
-            pairDevice(btDevice);
-        }
-
-    }
-
     public void handleNewDiscoveryFromWifiDirect(String btMacAddress){
 
         Gson gson = new Gson();
@@ -310,9 +402,9 @@ public class BluetoothManager extends BroadcastReceiver{
         return this.localAddress;
     }
 
-    public boolean discoveryIsRunning(){
-        return btDiscovery.discoveryIsRunning;
-    }
+//    public boolean discoveryIsRunning(){
+//        return btDiscovery.discoveryIsRunning;
+//    }
 
 
     public void deliverMsg(JsonMsg jsonMsg, ConnectedThread connectedThread){
@@ -342,8 +434,18 @@ public class BluetoothManager extends BroadcastReceiver{
         return this.localAddress;
     }
 
+    public State getState(){
+        return this.state;
+    }
+
+    public void setState(State state){
+
+        this.state = state;
+
+    }
+
     public boolean isRunning(){
-        return this.isRunning;
+        return this.state.equals(State.STATE_RUNNING);
     }
 
     public UUID getPadocUUID(){

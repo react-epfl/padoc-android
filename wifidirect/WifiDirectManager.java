@@ -16,6 +16,18 @@ public class WifiDirectManager extends BroadcastReceiver {
 
     public static final String BTMAC = "btmac";
 
+    public enum State {
+        STATE_NULL,
+        STATE_WIFI_P2P_DISABLED,
+        STATE_WIFI_P2P_STARTING,
+        STATE_WIFI_P2P_ENABLED,
+        STATE_SERVICE_REGISTERED,
+        STATE_DISCOVERY_ON,
+        STATE_RUNNING;
+    }
+
+    private State state = State.STATE_NULL;
+
     private boolean isRunning = false;
     private final MainActivity mActivity;
     private PadocManager padocManager;
@@ -23,7 +35,7 @@ public class WifiDirectManager extends BroadcastReceiver {
     private final WifiDirectService wdService;
     private final WifiDirectDiscovery wdDiscovery;
 
-    private boolean wifiDirectEnabled = false;
+//    private boolean wifiDirectEnabled = false;
 
     public WifiDirectManager(MainActivity mActivity, PadocManager padocManager){
 
@@ -43,17 +55,56 @@ public class WifiDirectManager extends BroadcastReceiver {
             //Device supports Wi-Fi
 
             //Make sure Wifi-Direct is on
-            this.wifiManager.setWifiEnabled(true);
+//            this.wifiManager.setWifiEnabled(true);
 
             //Initialize the service object
-            this.wdService = new WifiDirectService(mActivity);
+            this.wdService = new WifiDirectService(mActivity, this);
 
             //Initialize the discovery object
             this.wdDiscovery = new WifiDirectDiscovery(mActivity, this);
 
-            this.isRunning = true;
+//            this.isRunning = true;
         }
 
+    }
+
+    public void initialize(){
+
+        switch(state) {
+            case STATE_NULL :
+
+                if(!wifiManager.isWifiEnabled()) {
+                    if(wifiManager.setWifiEnabled(true)) state = State.STATE_WIFI_P2P_STARTING;
+                }else {
+                    //TODO : check if a reset is necessary
+
+                    this.state = State.STATE_WIFI_P2P_ENABLED;
+                    initialize();
+                }
+
+                break;
+            case STATE_WIFI_P2P_ENABLED :
+
+                startService();
+
+                break;
+            case STATE_SERVICE_REGISTERED :
+
+                startDiscovery();
+
+                this.state = State.STATE_RUNNING;
+
+                padocManager.initialize();
+
+                break;
+            case STATE_RUNNING :
+
+                mActivity.debugPrint("Wifi service and discovery is running.");
+
+                padocManager.initialize();
+
+                break;
+        }
 
     }
 
@@ -72,11 +123,17 @@ public class WifiDirectManager extends BroadcastReceiver {
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
                 // Wifi Direct mode is enabled
                 mActivity.debugPrint("WiFi-Direct ENABLED");
-                wifiDirectEnabled = true;
+
+                if(this.state.equals(State.STATE_WIFI_P2P_STARTING)) {
+                    this.state = State.STATE_WIFI_P2P_ENABLED;
+                    initialize();
+                }
+
+//                wifiDirectEnabled = true;
             } else {
                 // Wi-Fi P2P is not enabled
                 mActivity.debugPrint("Error: WiFi-Direct DISABLED");
-                wifiDirectEnabled = false;
+//                wifiDirectEnabled = false;
             }
         }
     }
@@ -108,6 +165,14 @@ public class WifiDirectManager extends BroadcastReceiver {
     }
 
     //Getters
+
+    public State getState(){
+        return this.state;
+    }
+
+    public void setState(State state){
+        this.state = state;
+    }
 
     public boolean isRunning(){
         return this.isRunning;

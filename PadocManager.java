@@ -21,7 +21,17 @@ public class PadocManager {
 
     private final UUID PADOC_UUID = UUID.fromString("aa40d6d0-16b0-11e6-bdf4-0800200c9a66");
     private final int MIN_RECOMMENDED_CONNECTIONS = 1;
+    private final int MAX_RECOMMENDED_CONNECTIONS = 3;
     private String ALL = "ALL";
+
+    public enum State{
+        STATE_NULL,
+        STATE_BLUETOOTH_RUNNING,
+        STATE_WIFI_P2P_RUNNING,
+        STATE_RUNNING;
+    }
+
+    private State state = State.STATE_NULL;
 
     private boolean DBG = true;
     private MainActivity mActivity;
@@ -55,7 +65,7 @@ public class PadocManager {
         this.localBluetoothAddress = btManager.getLocalBluetoothAddress();
 
         //Router
-        this.mRouter = new Router(localBluetoothAddress);
+        this.mRouter = new Router();
         btManager.setRouter(mRouter);
 
         //Messenger
@@ -63,9 +73,15 @@ public class PadocManager {
         btManager.setMessenger(mMessenger);
 
         btIntentFilter = new IntentFilter();
+        //Bluetooth state changes
+        btIntentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+        //Bluetooth found a new device
         btIntentFilter.addAction(BluetoothDevice.ACTION_FOUND);
+        //Bluetooth discovery finished
         btIntentFilter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        //Bluetooth detected new pairing state
         btIntentFilter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+        //Bluetooth pairing request from another device
         btIntentFilter.addAction(BluetoothDevice.ACTION_PAIRING_REQUEST);
 
         //TODO : registerReceiver, here or in onResume()
@@ -80,7 +96,7 @@ public class PadocManager {
 
         mActivity.registerReceiver(wdManager, wdIntentFilter);
 
-        initialize();
+//        initialize();
 
     }
 
@@ -88,19 +104,39 @@ public class PadocManager {
 
     public void initialize(){
 
-        if(btManager.isRunning() && wdManager.isRunning()){
-            //BluetoothManager and WifiDirectManager initialized correctly
+        if (btManager.getState().equals(BluetoothManager.State.STATE_NULL)
+                && wdManager.getState().equals(WifiDirectManager.State.STATE_NULL)){
 
-            //Start Bluetooth server
-            btManager.startServer();
+            btManager.initialize();
 
-            //Start Wifi-Direct service
-            wdManager.startService();
+        }else if (btManager.getState().equals(BluetoothManager.State.STATE_RUNNING)
+                && wdManager.getState().equals(WifiDirectManager.State.STATE_NULL)){
 
-            //Start Wifi-Direct scan
-            wdManager.startDiscovery();
+            wdManager.initialize();
 
+        }else if (btManager.getState().equals(BluetoothManager.State.STATE_NULL)
+                && wdManager.getState().equals(WifiDirectManager.State.STATE_RUNNING)){
+
+            //TODO
+        }else {
+            //TODO
         }
+
+
+//
+//        if(btManager.isRunning() && wdManager.isRunning()){
+//            //BluetoothManager and WifiDirectManager initialized correctly
+//
+//            //Start Bluetooth server
+//            btManager.startServer();
+//
+//            //Start Wifi-Direct service
+//            wdManager.startService();
+//
+//            //Start Wifi-Direct scan
+//            wdManager.startDiscovery();
+//
+//        }
 
         //Turn on if off
 
@@ -116,19 +152,29 @@ public class PadocManager {
 
     }
 
+    public void start(){
+
+    }
+
     public boolean verifyPadocAddress(String address){
         return padocReadyDevices.contains(address);
     }
 
+
+
+
+
+
+
     //Bluetooth functions
 
-    public void startBluetoothDiscovery(){
-        btManager.startDiscovery();
-    }
-
-    public void stopBluetoothDiscovery(){
-        btManager.stopDiscovery();
-    }
+//    public void startBluetoothDiscovery(){
+//        btManager.startDiscovery();
+//    }
+//
+//    public void stopBluetoothDiscovery(){
+//        btManager.stopDiscovery();
+//    }
 
     public void setBluetoothVisible(){
         btManager.setVisible();
@@ -184,7 +230,7 @@ public class PadocManager {
 
             btManager.handleNewDiscoveryFromWifiDirect(btAddress);
         }else {
-            wdManager.stopDiscovery();
+//            wdManager.stopDiscovery();
         }
 
     }

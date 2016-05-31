@@ -6,6 +6,7 @@ import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.net.wifi.p2p.nsd.WifiP2pServiceInfo;
 
 import com.react.gabriel.wbam.MainActivity;
+import com.react.gabriel.wbam.padoc.PadocManager;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,14 +17,16 @@ import java.util.Map;
 public class WifiDirectService {
 
     private final MainActivity mActivity;
+    private final WifiDirectManager wdManager;
     private final WifiP2pManager mManager;
     private final WifiP2pManager.Channel mChannel;
 
     private boolean serviceIsRunning = false;
 
-    public WifiDirectService(MainActivity mActivity){
+    public WifiDirectService(MainActivity mActivity, WifiDirectManager wdManager){
 
         this.mActivity = mActivity;
+        this.wdManager = wdManager;
         this.mManager = (WifiP2pManager) mActivity.getSystemService(Context.WIFI_P2P_SERVICE);
         this.mChannel = mManager.initialize(mActivity, mActivity.getMainLooper(), null);
 
@@ -49,11 +52,14 @@ public class WifiDirectService {
                     public void onSuccess() {
                         serviceIsRunning = true;
                         mActivity.debugPrint("PADOC service added successfully");
+                        wdManager.setState(WifiDirectManager.State.STATE_SERVICE_REGISTERED);
+                        wdManager.initialize();
                     }
                     @Override
                     public void onFailure(int reasonCode) {
                         serviceIsRunning = false;
                         mActivity.debugPrint("Error: PADOC service addition failed");
+                        wdManager.initialize();
                     }
                 });
             }

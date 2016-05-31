@@ -16,7 +16,6 @@ import java.util.Set;
 public class Router {
 
     public final int ADDRESS_UNKNOWN = -1;
-    private final String localAddress;
 
     //here are the devices that connected through the server thread and still need to be identified
     private Set<ConnectedThread> orphanDevices = null;
@@ -27,9 +26,8 @@ public class Router {
     //peers<String, String>
     private Map<String, String> peers = new HashMap<String, String>();
 
-    public Router(String localAddress){
+    public Router(){
 
-        this.localAddress = localAddress;
         this.connectedDevices = new HashMap<String, ConnectedThread>();
         this.orphanDevices = new HashSet<>();
         this.route = new HashMap<String, Pair<Integer, String>>();

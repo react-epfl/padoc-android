@@ -13,13 +13,11 @@ public class ClientThread extends Thread {
 
     private final BluetoothManager btManager;
     private final BluetoothSocket mmSocket;
-    private final BluetoothDiscovery btDiscovery;
     private final String serverAddress;
 
-    public ClientThread(BluetoothManager btManager, BluetoothDevice device, BluetoothDiscovery btDiscovery) {
+    public ClientThread(BluetoothManager btManager, BluetoothDevice device) {
 
         this.btManager = btManager;
-        this.btDiscovery = btDiscovery;
         this.serverAddress = device.getAddress();
         // Use a temporary object that is later assigned to mmSocket because mmSocket is final
         BluetoothSocket tmp = null;
@@ -34,7 +32,7 @@ public class ClientThread extends Thread {
 
     public void run() {
         // Cancel discovery because it will slow down the connection
-        if(btDiscovery.discoveryIsRunning) btDiscovery.stopDiscovery();
+//        if(btDiscovery.discoveryIsRunning) btDiscovery.stopDiscovery();
 
         try {
             // Connect the device through the socket. This will block
