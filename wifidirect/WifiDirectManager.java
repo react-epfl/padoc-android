@@ -18,7 +18,7 @@ public class WifiDirectManager extends BroadcastReceiver {
 
     public enum State {
         STATE_NULL,
-        STATE_WIFI_P2P_DISABLED,
+        STATE_WIFI_P2P_RESETTING,
         STATE_WIFI_P2P_STARTING,
         STATE_WIFI_P2P_ENABLED,
         STATE_SERVICE_REGISTERED,
@@ -34,8 +34,6 @@ public class WifiDirectManager extends BroadcastReceiver {
     private final WifiManager wifiManager;
     private final WifiDirectService wdService;
     private final WifiDirectDiscovery wdDiscovery;
-
-//    private boolean wifiDirectEnabled = false;
 
     public WifiDirectManager(MainActivity mActivity, PadocManager padocManager){
 
@@ -74,18 +72,45 @@ public class WifiDirectManager extends BroadcastReceiver {
             case STATE_NULL :
 
                 if(!wifiManager.isWifiEnabled()) {
-                    if(wifiManager.setWifiEnabled(true)) state = State.STATE_WIFI_P2P_STARTING;
+                    //Wifi is not enabled
+
+                    if(wifiManager.setWifiEnabled(true)){
+                        state = State.STATE_WIFI_P2P_STARTING;
+                    }else {
+                        mActivity.debugPrint("ERROR : Could not turn on WiFi");
+                    }
                 }else {
                     //TODO : check if a reset is necessary
+                    //Sometimes discovery does not work, resetting wifi solves it. for now..
 
-                    this.state = State.STATE_WIFI_P2P_ENABLED;
-                    initialize();
+                    if(wifiManager.setWifiEnabled(false)){
+                        state = State.STATE_WIFI_P2P_RESETTING;
+                    }else {
+                        mActivity.debugPrint("ERROR : Could not turn off WiFi.");
+                    }
                 }
 
                 break;
             case STATE_WIFI_P2P_ENABLED :
 
-                startService();
+                WifiP2pManager.ActionListener actionListener = new WifiP2pManager.ActionListener() {
+                    @Override
+                    public void onSuccess() {
+                        wdService.setServiceIsRunning(true);
+                        mActivity.debugPrint("PADOC service added successfully");
+                        state = State.STATE_SERVICE_REGISTERED;
+                        initialize();
+                    }
+
+                    @Override
+                    public void onFailure(int reason) {
+                        wdService.setServiceIsRunning(false);
+                        mActivity.debugPrint("ERROR : PADOC service failed");
+//                        initialize();
+                    }
+                };
+
+                startService(actionListener);
 
                 break;
             case STATE_SERVICE_REGISTERED :
@@ -112,8 +137,6 @@ public class WifiDirectManager extends BroadcastReceiver {
 
         String action = intent.getAction();
 
-//        if (DBG) mActivity.debugPrint("=== "+ action);
-
         if (WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)) {
             // Have access to: EXTRA_WIFI_STATE
             // Constant Value: "android.net.wifi.p2p.STATE_CHANGED"
@@ -128,27 +151,32 @@ public class WifiDirectManager extends BroadcastReceiver {
                     this.state = State.STATE_WIFI_P2P_ENABLED;
                     initialize();
                 }
-
-//                wifiDirectEnabled = true;
             } else {
                 // Wi-Fi P2P is not enabled
-                mActivity.debugPrint("Error: WiFi-Direct DISABLED");
-//                wifiDirectEnabled = false;
+                mActivity.debugPrint("WiFi-Direct DISABLED");
+
+                if(this.state.equals(State.STATE_WIFI_P2P_RESETTING)){
+                    if(wifiManager.setWifiEnabled(true)) {
+                        this.state = State.STATE_WIFI_P2P_STARTING;
+                    }else {
+                        mActivity.debugPrint("ERROR : Could not enable WiFi.");
+                    }
+                }
             }
         }
     }
 
-    public void startService() {
+    public void startService(WifiP2pManager.ActionListener actionListener) {
         String btAddress = padocManager.getLocalBluetoothAddress();
         if(btAddress != null){
-            wdService.startService(btAddress, null);
+            wdService.startService(btAddress, actionListener);
         }else {
             padocManager.debugPrint("ERROR : local Bluetooth address is missing!");
         }
     }
 
-    public void stopService(){
-        wdService.stopService(null);
+    public void forceStopService(){
+        wdService.forceStopService();
     }
 
     public void startDiscovery(){
@@ -157,6 +185,10 @@ public class WifiDirectManager extends BroadcastReceiver {
 
     public void stopDiscovery(){
         wdDiscovery.stopDiscovery(null);
+    }
+
+    public void stopWifi(){
+        wifiManager.setWifiEnabled(false);
     }
 
     public void handleNewWifiDirectDiscovery(String btMacAddress){

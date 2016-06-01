@@ -69,12 +69,14 @@ public class WifiDirectDiscovery {
             @Override
             public void onDnsSdTxtRecordAvailable(String fullDomain, Map record, WifiP2pDevice device) {
                 //TODO: handle discovered devices
-                mActivity.debugPrint("Discovered : " + device.deviceName);
-//                if (DBG) mActivity.debugPrint("ssid : " + record.get("ssid"));
-                if(fullDomain.contains("padoc") && record.get(WifiDirectManager.BTMAC)!=null){
-//                    if (DBG) mActivity.debugPrint("Attempting connection to : " + record.get("ssid") + "|"+record.get("key"));
+//                mActivity.debugPrint("Discovered : " + device.deviceName);
 
-                    wdManager.handleNewWifiDirectDiscovery((String)record.get(WifiDirectManager.BTMAC));
+                String btMac = (String) record.get(WifiDirectManager.BTMAC);
+
+                if(fullDomain.contains("padoc") && btMac != null){
+                    //This device is using Padoc
+
+                    wdManager.handleNewWifiDirectDiscovery(btMac);
                 }
             }
         };
@@ -91,7 +93,7 @@ public class WifiDirectDiscovery {
                 mManager.discoverServices(mChannel, new WifiP2pManager.ActionListener() {
                     @Override
                     public void onSuccess() {
-                        mActivity.debugPrint("Scanning...");
+//                        mActivity.debugPrint("Scanning...");
                     }
 
                     @Override

@@ -8,7 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 
 import com.google.gson.Gson;
-import com.react.gabriel.wbam.padoc.JsonMsg;
+import com.react.gabriel.wbam.padoc.Message;
 import com.react.gabriel.wbam.MainActivity;
 import com.react.gabriel.wbam.padoc.Messenger;
 import com.react.gabriel.wbam.padoc.PadocManager;
@@ -257,7 +257,9 @@ public class BluetoothManager extends BroadcastReceiver{
      */
     public void connectTo(BluetoothDevice btDevice){
         mActivity.debugPrint("Connecting to " + btDevice.getName());
-        (new ClientThread(this, btDevice)).start();
+
+        ClientThread clientThread = new ClientThread(this, btDevice);
+        clientThread.start();
     }
 
     //TODO : unnecessary
@@ -367,7 +369,7 @@ public class BluetoothManager extends BroadcastReceiver{
 
             mRouter.setConnectedDevice(remoteAddress, connectedThread);
 
-            mActivity.debugPrint("Connected to " + remoteAddress);
+            padocManager.connectionSucceeded(remoteAddress);
 
             mMessenger.introduceMyselfToThread(connectedThread);
 
@@ -378,11 +380,15 @@ public class BluetoothManager extends BroadcastReceiver{
             connectedThread.start();
 
             mRouter.setOrphanThread(connectedThread);
-            mActivity.debugPrint("Connected to unidentified peer");
+            mActivity.debugPrint("Unidentified peer just connected.");
         }
     }
 
-    public void handleNewDiscoveryFromWifiDirect(String btMacAddress){
+    public void connectionFailed(String macAddress){
+        padocManager.connectionFailed(macAddress);
+    }
+
+    public void connectWith(String btMacAddress){
 
         Gson gson = new Gson();
 
@@ -407,8 +413,8 @@ public class BluetoothManager extends BroadcastReceiver{
 //    }
 
 
-    public void deliverMsg(JsonMsg jsonMsg, ConnectedThread connectedThread){
-        mMessenger.deliverMsg(jsonMsg, connectedThread);
+    public void deliverMsg(Message message, ConnectedThread connectedThread){
+        mMessenger.deliverMsg(message, connectedThread);
     }
 
     //ROUTER

@@ -34,20 +34,20 @@ public class Messenger {
     /**
      * Decides what to do with any received message,
      * either prints the message if it is meant for this device and/or forwards it otherwise.
-     * @param jsonMsg
+     * @param message
      * @param fromThread
      */
-    public void deliverMsg(JsonMsg jsonMsg, ConnectedThread fromThread){
+    public void deliverMsg(Message message, ConnectedThread fromThread){
 
-        JsonMsg.Algo algo = jsonMsg.getAlgo();
+        Message.Algo algo = message.getAlgo();
 
-        JsonMsg.ContentType contentType;
+        Message.ContentType contentType;
 
         switch (algo){
 
             case CBS:
 
-                String msgID = jsonMsg.getUUID();
+                String msgID = message.getUUID();
 
                 if(!cbsMsgTracker.containsKey(msgID)){
                     //First time we get this msg, initialize counter to one.
@@ -58,9 +58,9 @@ public class Messenger {
 
                     cbsMsgTracker.put(msgID, sources);
 
-                    new CBSThread(this, jsonMsg).start();
+                    new CBSThread(this, message).start();
 
-                    printMsg(jsonMsg);
+                    printMsg(message);
 
                     //Initialize RAD
                 }else{
@@ -80,20 +80,20 @@ public class Messenger {
 
             case SINGLE:
 
-                String destination = jsonMsg.getDestination();
+                String destination = message.getDestination();
 
                 if(destination.equals(localBluetoothAddress)){
                     //Msg has reached its destination, display it.
-                    printMsg(jsonMsg);
+                    printMsg(message);
                 }else{
                     //This is not the final destination of the message, forward it.
-                    forwardMsg(jsonMsg);
+                    forwardMsg(message);
                 }
                 break;
 
             case IDProp:
 
-                contentType = jsonMsg.getContentType();
+                contentType = message.getContentType();
 
                 switch (contentType){
 
@@ -101,10 +101,10 @@ public class Messenger {
 
                         mActivity.debugPrint("Got ID");
 
-                        String newAddress = jsonMsg.getMsg();
-                        String sourceAddress = jsonMsg.getSource();
+                        String newAddress = message.getMsg();
+                        String sourceAddress = message.getSource();
 
-                        int hops = jsonMsg.getHops();
+                        int hops = message.getHops();
 
                         if(fromThread.isOrphan() && hops == 0 && sourceAddress.equals(newAddress)){
                             //ID msg is original (not a forward)
@@ -115,8 +115,8 @@ public class Messenger {
                             //Because the peer is new we should greet him with the necessary info
                             sendMeshInfoTo(newAddress);
 
-                            if(jsonMsg.getDestination().equals(ALL)) {
-                                forwardBroadcastIDMsg(jsonMsg, fromThread.getRemoteAddress());
+                            if(message.getDestination().equals(ALL)) {
+                                forwardBroadcastIDMsg(message, fromThread.getRemoteAddress());
                             }
                         }
 
@@ -126,10 +126,16 @@ public class Messenger {
                             mRouter.setRoute(newAddress, hops, fromThread.getRemoteAddress());
                             mActivity.debugPrint("Saved ID route");
 
-                            if(jsonMsg.getDestination().equals(ALL)){
-                                forwardBroadcastIDMsg(jsonMsg, fromThread.getRemoteAddress());
+                            if(message.getDestination().equals(ALL)){
+                                forwardBroadcastIDMsg(message, fromThread.getRemoteAddress());
                             }
                         }
+                        break;
+
+                    case IDS:
+
+                        //TODO
+
                         break;
                 }
                 break;
@@ -148,12 +154,12 @@ public class Messenger {
         cbsMsgTracker.remove(uuid);
     }
 
-    public void broadcastMsg(JsonMsg jsonMsg){
+    public void broadcastMsg(Message message){
 
-        if(jsonMsg.getDestination().equals(ALL)){
+        if(message.getDestination().equals(ALL)){
 
             for(ConnectedThread connectedThread : mRouter.getConnectedThreads()){
-                connectedThread.write(jsonMsg);
+                connectedThread.write(message);
             }
 
         }else {
@@ -164,17 +170,17 @@ public class Messenger {
     /**
      * Forwards the message to any direct node that is not in the banned list.
      * The banned list is typically constituted by the peers who we already received the msg from.
-     * @param jsonMsg
+     * @param message
      * @param bannedAddresses
      */
-    public void forwardBroadcast(JsonMsg jsonMsg, Set<String> bannedAddresses){
+    public void forwardBroadcast(Message message, Set<String> bannedAddresses){
 
-        if(jsonMsg.getDestination().equals(ALL)){
-            jsonMsg.incrementHop();
+        if(message.getDestination().equals(ALL)){
+            message.incrementHop();
 
             for(Map.Entry<String, ConnectedThread> connectedEntry : mRouter.getConnectedEntries()){
                 if(!bannedAddresses.contains(connectedEntry.getKey())){
-                    connectedEntry.getValue().write(jsonMsg);
+                    connectedEntry.getValue().write(message);
                 }
             }
         }else {
@@ -182,15 +188,15 @@ public class Messenger {
         }
     }
 
-    public void forwardBroadcastIDMsg(JsonMsg jsonMsg, String fromAddress){
+    public void forwardBroadcastIDMsg(Message message, String fromAddress){
 
-        if(jsonMsg.getDestination().equals(ALL)){
+        if(message.getDestination().equals(ALL)){
 
-            jsonMsg.incrementHop();
+            message.incrementHop();
 
             for(Map.Entry<String, ConnectedThread> connectedEntry : mRouter.getConnectedEntries()){
                 if(!connectedEntry.getKey().equals(fromAddress)){
-                    connectedEntry.getValue().write(jsonMsg);
+                    connectedEntry.getValue().write(message);
                 }
             }
         }else{
@@ -198,12 +204,12 @@ public class Messenger {
         }
     }
 
-    public void forwardMsg(JsonMsg jsonMsg){
+    public void forwardMsg(Message message){
 
-        String destination = jsonMsg.getDestination();
+        String destination = message.getDestination();
         if(mRouter.knows(destination)){
-            jsonMsg.incrementHop();
-            mRouter.getRoutingThreadFor(destination).write(jsonMsg);
+            message.incrementHop();
+            mRouter.getRoutingThreadFor(destination).write(message);
 
         }else{
             mActivity.debugPrint("ERROR : forward destination unknown");
@@ -214,15 +220,15 @@ public class Messenger {
 
         if(destination.equals(ALL)){
 
-            JsonMsg jsonMsg = new JsonMsg(JsonMsg.Algo.CBS, JsonMsg.ContentType.MSG, msg, localBluetoothAddress, destination, 0);
+            Message message = new Message(Message.Algo.CBS, Message.ContentType.MSG, msg, localBluetoothAddress, destination, 0);
 
             for(ConnectedThread connectedThread : mRouter.getConnectedThreads()){
-                connectedThread.write(jsonMsg);
+                connectedThread.write(message);
             }
         }else if(mRouter.knows(destination)){
 
-            JsonMsg jsonMsg = new JsonMsg(JsonMsg.Algo.SINGLE, JsonMsg.ContentType.MSG, msg, localBluetoothAddress, destination, 0);
-            mRouter.getRoutingThreadFor(destination).write(jsonMsg);
+            Message message = new Message(Message.Algo.SINGLE, Message.ContentType.MSG, msg, localBluetoothAddress, destination, 0);
+            mRouter.getRoutingThreadFor(destination).write(message);
             mActivity.debugPrint("ME : " + msg);
 
         }else if(destination.equals(localBluetoothAddress)){
@@ -236,23 +242,38 @@ public class Messenger {
 
     public void introduceMyselfToThread(ConnectedThread connectedThread){
         mActivity.debugPrint("Sending my ID");
-        JsonMsg idJsonMsg = JsonMsg.getIDMsg(localBluetoothAddress);
-        connectedThread.write(idJsonMsg);
+        Message IDMessage = Message.getIDMsg(localBluetoothAddress);
+        connectedThread.write(IDMessage);
     }
 
     public void sendMeshInfoTo(String newAddress){
+        String knownPeersString = "";
+
+        for(Map.Entry<String, Pair<Integer, String>> knownPeer : mRouter.getKnownPeers()){
+            String knownAddress = knownPeer.getKey();
+
+            if(!knownAddress.equals(newAddress)){
+                knownPeersString += "<"+newAddress;
+            }
+        }
+
+        //TODO
+        Message knwonPeersMessage = new Message(Message.Algo.IDProp, Message.ContentType.IDS, knownPeersString, localBluetoothAddress, newAddress, 0);
 
         for(Map.Entry<String, Pair<Integer, String>> knownPeer : mRouter.getKnownPeers()){
             String knwonAddress = knownPeer.getKey();
             if(!knwonAddress.equals(newAddress)){
+                mActivity.debugPrint("Sending peer : " + knwonAddress);
                 int hops = knownPeer.getValue().first+1;
-                JsonMsg jsonMsg = new JsonMsg(JsonMsg.Algo.IDProp, JsonMsg.ContentType.ID, knwonAddress, localBluetoothAddress, newAddress, hops);
-                mRouter.getRoutingThreadFor(newAddress).write(jsonMsg);
+                Message message = new Message(Message.Algo.IDProp, Message.ContentType.ID, knwonAddress, localBluetoothAddress, newAddress, hops);
+                mRouter.getRoutingThreadFor(newAddress).write(message);
             }
         }
+
+
     }
 
-    private void printMsg(JsonMsg jsonMsg){
-        mActivity.debugPrint(jsonMsg.getSource() + " : " + jsonMsg.getMsg() + " (" + jsonMsg.getHops() + ")");
+    private void printMsg(Message message){
+        mActivity.debugPrint(message.getSource() + " : " + message.getMsg() + " (" + message.getHops() + ")");
     }
 }

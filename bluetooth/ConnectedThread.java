@@ -2,7 +2,7 @@ package com.react.gabriel.wbam.padoc.bluetooth;
 
 import android.bluetooth.BluetoothSocket;
 
-import com.react.gabriel.wbam.padoc.JsonMsg;
+import com.react.gabriel.wbam.padoc.Message;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,8 +50,8 @@ public class ConnectedThread extends Thread {
                 //Without Handler
                 bytes = mmInStream.read(buffer);
                 String jsonString = new String(buffer, 0, bytes);
-                JsonMsg jsonMsg = new JsonMsg(jsonString);
-                btManager.deliverMsg(jsonMsg, this);
+                Message message = new Message(jsonString);
+                btManager.deliverMsg(message, this);
 
             } catch (IOException e) {
                 break;
@@ -60,10 +60,10 @@ public class ConnectedThread extends Thread {
     }
 
     /* Call this from the main activity to send data to the remote device */
-    public void write(JsonMsg jsonMsg) {
+    public void write(Message message) {
         try {
-            System.out.println("Sending " + jsonMsg.toString());
-            byte[] bytes = jsonMsg.toString().getBytes();
+            System.out.println("Sending " + message.toString());
+            byte[] bytes = message.toString().getBytes();
             mmOutStream.write(bytes);
         } catch (IOException e) { }
     }

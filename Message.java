@@ -8,7 +8,7 @@ import java.util.UUID;
 /**
  * Created by gabriel on 13/05/16.
  */
-public class JsonMsg {
+public class Message {
 
     //UUID
     private static final String ID = "id";
@@ -37,7 +37,7 @@ public class JsonMsg {
     //TODO : maybe every JSON field should be declared as an Objet field, some finals, like the ID.
 
     public enum ContentType {
-        ID, MSG, PRIORITY;
+        ID, IDS, MSG, PRIORITY;
     }
 
     public enum Algo {
@@ -46,7 +46,7 @@ public class JsonMsg {
 
     private JSONObject jsonMsg = null;
 
-    public JsonMsg(Algo algo, ContentType contentType, String content, String source, String destination, int hops){
+    public Message(Algo algo, ContentType contentType, String content, String source, String destination, int hops){
 
         this.jsonMsg = new JSONObject();
 
@@ -80,7 +80,7 @@ public class JsonMsg {
         }
     }
 
-    public JsonMsg(String jsonString){
+    public Message(String jsonString){
         //TODO : need to verify content
         try{
             this.jsonMsg = new JSONObject(jsonString);
@@ -89,8 +89,8 @@ public class JsonMsg {
         }
     }
 
-    public static JsonMsg getIDMsg(String localAddress){
-        return new JsonMsg(Algo.IDProp, ContentType.ID, localAddress, localAddress, ALL, 0);
+    public static Message getIDMsg(String localAddress){
+        return new Message(Algo.IDProp, ContentType.ID, localAddress, localAddress, ALL, 0);
     }
 
     public ContentType getContentType(){

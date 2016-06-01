@@ -15,19 +15,19 @@ public class CBSThread extends Thread {
     private int rad;
 
     private Messenger mMessenger;
-    private final JsonMsg jsonMsg;
+    private final Message message;
 
-    public CBSThread(Messenger mMessenger, JsonMsg jsonMsg){
+    public CBSThread(Messenger mMessenger, Message message){
 
         this.mMessenger = mMessenger;
-        this.jsonMsg = jsonMsg;
+        this.message = message;
         this.rad = (int)(Math.random() * cbsMaxRAD);
 
     }
 
     public void run(){
 
-        final String uuid = jsonMsg.getUUID();
+        final String uuid = message.getUUID();
 
         System.out.println("RAD is : " + rad);
 
@@ -43,7 +43,7 @@ public class CBSThread extends Thread {
         System.out.println("Count is n = " + n);
 
         if(n<nMax) {
-            mMessenger.forwardBroadcast(jsonMsg, mMessenger.getCBSBannedListForMsg(uuid));
+            mMessenger.forwardBroadcast(message, mMessenger.getCBSBannedListForMsg(uuid));
         }
 
         mMessenger.clearCBSTrack(uuid);

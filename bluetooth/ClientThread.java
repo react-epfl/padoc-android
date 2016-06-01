@@ -47,7 +47,11 @@ public class ClientThread extends Thread {
         }
 
         // Do work to manage the connection (in a separate thread)
-        btManager.manageConnectedSocket(mmSocket, serverAddress);
+        if(mmSocket.isConnected()){
+            btManager.manageConnectedSocket(mmSocket, serverAddress);
+        }else {
+            btManager.connectionFailed(serverAddress);
+        }
     }
 
     /** Will cancel an in-progress connection, and close the socket */

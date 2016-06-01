@@ -16,9 +16,17 @@ This is the ReadMe file for the Padoc library for Android
 * ~~Turn Wifi on automatically~~ OK
 * ~~Reset Wifi at start~~
 * ~~Reset Bluetooth at start~~
-* ~~Get Bluetooth and Wifi status when starting~~
+* ~~Get Bluetooth and Wifi status when starting~~ OK
 * Remove time limit on Wifi-Direct discovery
-* Include mesh info in advertised service
+* Implement mesh awarness
+	* Include mesh info in advertised service
+	* Send mesh info when connecting to server
 * __Stop service advertising when killing app__
-* Re-register service every so often. Otherwise if device is not scanning it won't be discovered. Weird.
-* __Don't try to connect if another connection is being made__
+* ~~Re-register service every so often. Otherwise if device is not scanning it won't be discovered. Weird.~~
+	* Problem lies in discovery, wifi reset solves it, for now...
+* ~~__Don't try to connect if another connection is being made__~~ OK
+* ~~Clean discovery process~~ OK
+* Make app work when in background mode
+* Send mesh peers to new peer in one message instead of many
+* Verify if source address is known when receiving a message
+* Complete documentation

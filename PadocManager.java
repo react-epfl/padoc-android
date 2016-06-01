@@ -28,7 +28,8 @@ public class PadocManager {
         STATE_NULL,
         STATE_BLUETOOTH_RUNNING,
         STATE_WIFI_P2P_RUNNING,
-        STATE_RUNNING;
+        STATE_RUNNING,
+        STATE_ATTEMPTING_CONNECTION;
     }
 
     private State state = State.STATE_NULL;
@@ -51,7 +52,7 @@ public class PadocManager {
     private IntentFilter wdIntentFilter;
 
     //Set containing addresses running PADOC
-    private Set<String> padocReadyDevices = new HashSet<String>();
+//    private Set<String> padocReadyDevices = new HashSet<String>();
 
     //Set containing peers addresses (first) and names (second) in the network
     private Set<Pair<String, String>> padocPeers = new HashSet<Pair<String, String>>();
@@ -107,21 +108,25 @@ public class PadocManager {
         if (btManager.getState().equals(BluetoothManager.State.STATE_NULL)
                 && wdManager.getState().equals(WifiDirectManager.State.STATE_NULL)){
 
+            this.state = State.STATE_NULL;
             btManager.initialize();
 
         }else if (btManager.getState().equals(BluetoothManager.State.STATE_RUNNING)
                 && wdManager.getState().equals(WifiDirectManager.State.STATE_NULL)){
 
+            this.state = State.STATE_BLUETOOTH_RUNNING;
             wdManager.initialize();
 
         }else if (btManager.getState().equals(BluetoothManager.State.STATE_NULL)
                 && wdManager.getState().equals(WifiDirectManager.State.STATE_RUNNING)){
 
-            //TODO
+            //TODO : Complete
+            this.state = State.STATE_WIFI_P2P_RUNNING;
         }else {
-            //TODO
-        }
 
+            //TODO
+            this.state = State.STATE_RUNNING;
+        }
 
 //
 //        if(btManager.isRunning() && wdManager.isRunning()){
@@ -156,9 +161,9 @@ public class PadocManager {
 
     }
 
-    public boolean verifyPadocAddress(String address){
-        return padocReadyDevices.contains(address);
-    }
+//    public boolean verifyPadocAddress(String address){
+//        return padocReadyDevices.contains(address);
+//    }
 
 
 
@@ -203,11 +208,15 @@ public class PadocManager {
     //WifiDirect functions
 
     public void startWifiDirectService(){
-        wdManager.startService();
+        wdManager.startService(null);
     }
 
-    public void stopWifiDirectService(){
-        wdManager.stopService();
+    public void forceStopWifiDirectService(){
+        wdManager.forceStopService();
+    }
+
+    public void stopWifi(){
+        wdManager.stopWifi();
     }
 
     public void startWifiDirectDiscovery(){
@@ -221,18 +230,29 @@ public class PadocManager {
     public void registerNewBluetoothAddress(String btAddress){
         //Called when a new Padoc device is discovered through Wifi-Direct
 
-        padocReadyDevices.add(btAddress);
+//        padocReadyDevices.add(btAddress);
         //TODO : if this is the first addition to the set, start bluetooth discovery.
 
-        if(mRouter.numberOfActiveConnections() < MIN_RECOMMENDED_CONNECTIONS){
+        if(mRouter.numberOfActiveConnections() < MIN_RECOMMENDED_CONNECTIONS && !state.equals(State.STATE_ATTEMPTING_CONNECTION) && state.equals(State.STATE_RUNNING)){
             //We still don't have the minimum recommended number of connections.
             //We should attempt a connection to this device.
 
-            btManager.handleNewDiscoveryFromWifiDirect(btAddress);
+            state = State.STATE_ATTEMPTING_CONNECTION;
+            btManager.connectWith(btAddress);
         }else {
 //            wdManager.stopDiscovery();
+//            mActivity.debugPrint("Plop");
         }
+    }
 
+    public void connectionSucceeded(String macAddress){
+        mActivity.debugPrint("Connection to " + macAddress + " succeeded.");
+        state = State.STATE_RUNNING;
+    }
+
+    public void connectionFailed(String macAddress){
+        mActivity.debugPrint("ERROR : Connection to " + macAddress + " failed.");
+        state = State.STATE_RUNNING;
     }
 
     public String[] getPeers(){

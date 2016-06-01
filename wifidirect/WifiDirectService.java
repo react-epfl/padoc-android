@@ -52,14 +52,11 @@ public class WifiDirectService {
                     public void onSuccess() {
                         serviceIsRunning = true;
                         mActivity.debugPrint("PADOC service added successfully");
-                        wdManager.setState(WifiDirectManager.State.STATE_SERVICE_REGISTERED);
-                        wdManager.initialize();
                     }
                     @Override
                     public void onFailure(int reasonCode) {
                         serviceIsRunning = false;
                         mActivity.debugPrint("Error: PADOC service addition failed");
-                        wdManager.initialize();
                     }
                 });
             }
@@ -92,5 +89,23 @@ public class WifiDirectService {
         }else {
             mActivity.debugPrint("Error: PADOC Service is already OFF");
         }
+    }
+
+    public void forceStopService(){
+        mManager.clearLocalServices(mChannel, new WifiP2pManager.ActionListener() {
+            public void onSuccess() {
+                serviceIsRunning = false;
+                mActivity.debugPrint("PADOC is OFF");
+            }
+
+            public void onFailure(int reason) {
+                serviceIsRunning = true;
+                mActivity.debugPrint("Error: Could not clear PADOC Service");
+            }
+        });
+    }
+
+    public void setServiceIsRunning(boolean isRunning){
+        this.serviceIsRunning = isRunning;
     }
 }
