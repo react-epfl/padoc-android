@@ -6,7 +6,7 @@ This is the ReadMe file for the Padoc library for Android
 
 * Bluetooth paring dialog is not always dismissed, functionality is not compromised but it is still annoying.
 * Create general functions that automate the multiple necessary steps to join a mesh, ~~or even to start scanning properly~~, etc.
-* Integrate peer names and hops and make them available.
+* ~~Integrate peer names and hops and make them available.~~
 * Detect and implement deconnections!
 * Implement priority peers/leaf nodes.
 * Detect when bluetooth pairing/connection did not work. (out of reach, etc)
@@ -26,6 +26,7 @@ This is the ReadMe file for the Padoc library for Android
 	* Problem lies in discovery, wifi reset solves it, for now...
 * ~~__Don't try to connect if another connection is being made__~~ OK
 * Pause server while attempting a connection
+* Stop service while attempting a connection
 * Detect or prevent double sockets
 * ~~Clean discovery process~~ OK
 * Make app work when in background mode

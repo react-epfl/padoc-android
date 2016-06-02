@@ -72,11 +72,12 @@ public class WifiDirectDiscovery {
 //                mActivity.debugPrint("Discovered : " + device.deviceName);
 
                 String btMac = (String) record.get(WifiDirectManager.BTMAC);
+                String btName = (String) record.get(WifiDirectManager.BTNAME);
 
                 if(fullDomain.contains("padoc") && btMac != null){
                     //This device is using Padoc
 
-                    wdManager.handleNewWifiDirectDiscovery(btMac);
+                    wdManager.handleNewWifiDirectDiscovery(btName, btMac);
                 }
             }
         };

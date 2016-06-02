@@ -61,7 +61,7 @@ public class ServerThread extends Thread {
             // If a connection was accepted
             if (socket != null) {
                 // Do work to manage the connection (in a separate thread)
-                btManager.manageConnectedSocket(socket, null);
+                btManager.manageConnectedSocket(null, socket, null);
                 n++;
             }
         }

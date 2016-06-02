@@ -23,8 +23,10 @@ public class Router {
     private Map<String, ConnectedThread> connectedDevices = null;
     //route<destinationAddress, <hops, routingAddress>>
     private Map<String, Pair<Integer, String>> route = null;
-    //peers<String, String>
-    private Map<String, String> peers = new HashMap<String, String>();
+    //peerNames<address, name>
+    private Map<String, String> peerNames = new HashMap<String, String>();
+    //peerNames<address, hops>
+    private Map<String, Integer> peerHops = new HashMap<String, Integer>();
 
     public Router(){
 
@@ -38,13 +40,12 @@ public class Router {
         return orphanDevices.contains(thread);
     }
 
-    public void identifyOrphanThread(ConnectedThread connectedThread, String remoteAddress){
+    public void identifyOrphanThread(String name, ConnectedThread connectedThread, String remoteAddress){
         if(threadIsConsideredOrphan(connectedThread)){
 
             connectedThread.setRemoteAddress(remoteAddress);
             connectedDevices.put(remoteAddress, connectedThread);
-
-            setRoute(remoteAddress, 0, remoteAddress);
+            setRoute(name, remoteAddress, 0, remoteAddress);
             orphanDevices.remove(connectedThread);
 
         }else{
@@ -65,8 +66,10 @@ public class Router {
         }
     }
 
-    public Pair<Integer, String> setRoute(String destinationAddress, int hops, String routeAddress){
+    public Pair<Integer, String> setRoute(String name, String destinationAddress, int hops, String routeAddress){
 
+        peerNames.put(destinationAddress, name);
+        peerHops.put(destinationAddress, hops);
         return route.put(destinationAddress, new Pair<Integer, String>(hops, routeAddress));
     }
 
@@ -76,9 +79,9 @@ public class Router {
         return connectedDevices.get(routingAddress);
     }
 
-    public ConnectedThread setConnectedDevice(String remoteAddress, ConnectedThread connectedThread){
+    public ConnectedThread setConnectedDevice(String name, String remoteAddress, ConnectedThread connectedThread){
 
-        setRoute(remoteAddress, 0, remoteAddress);
+        setRoute(name, remoteAddress, 0, remoteAddress);
         return connectedDevices.put(remoteAddress, connectedThread);
     }
 
@@ -101,6 +104,19 @@ public class Router {
 
     public Set<String> getPeers(){
         return route.keySet();
+    }
+
+    public String getNameFor(String address){
+        return peerNames.get(address);
+    }
+
+    public Set<java.util.Map.Entry<String, String>> getPeerNamesAndHops(){
+
+        return peerNames.entrySet();
+
+//        String[] array = new String[peerNames.values().size()];
+//
+//        return peerNames.values().toArray(array);
     }
 
     public String getRoutingAddressFor(String address){

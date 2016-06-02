@@ -15,6 +15,7 @@ import com.react.gabriel.wbam.padoc.PadocManager;
 public class WifiDirectManager extends BroadcastReceiver {
 
     public static final String BTMAC = "btmac";
+    public static final String BTNAME = "btname";
 
     public enum State {
         STATE_NULL,
@@ -168,8 +169,9 @@ public class WifiDirectManager extends BroadcastReceiver {
 
     public void startService(WifiP2pManager.ActionListener actionListener) {
         String btAddress = padocManager.getLocalBluetoothAddress();
+        String btName = padocManager.getLocalName();
         if(btAddress != null){
-            wdService.startService(btAddress, actionListener);
+            wdService.startService(btName, btAddress, actionListener);
         }else {
             padocManager.debugPrint("ERROR : local Bluetooth address is missing!");
         }
@@ -191,9 +193,9 @@ public class WifiDirectManager extends BroadcastReceiver {
         wifiManager.setWifiEnabled(false);
     }
 
-    public void handleNewWifiDirectDiscovery(String btMacAddress){
+    public void handleNewWifiDirectDiscovery(String name, String btMacAddress){
         //TODO : Need to try connecting directly with the btMacAddress, without bluetooth discovery
-        padocManager.registerNewBluetoothAddress(btMacAddress);
+        padocManager.registerNewBluetoothAddress(name, btMacAddress);
     }
 
     //Getters

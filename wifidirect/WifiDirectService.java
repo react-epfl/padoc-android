@@ -36,11 +36,12 @@ public class WifiDirectService {
      * When specifying custom actionListener, do not forget to set serviceIsRunning
      * @param actionListener
      */
-    public void startService(String btMAC, WifiP2pManager.ActionListener actionListener) {
+    public void startService(String btName, String btMAC, WifiP2pManager.ActionListener actionListener) {
         if(!serviceIsRunning){
             Map<String, String> values = new HashMap<String, String>();
             //http://files.dns-sd.org/draft-cheshire-dnsext-dns-sd.txt | Sections 6.5 & 6.6
             values.put(WifiDirectManager.BTMAC, btMAC);
+            values.put(WifiDirectManager.BTNAME, btName);
 
             WifiP2pServiceInfo serviceInfo = WifiP2pDnsSdServiceInfo.newInstance("PADOC", "_http._tcp", values);
 

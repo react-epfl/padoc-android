@@ -198,7 +198,7 @@ public class BluetoothManager extends BroadcastReceiver{
             if (state == BluetoothDevice.BOND_BONDED && prevState == BluetoothDevice.BOND_BONDING) {
                 mActivity.debugPrint("Paired " + btDevice.getName());
                 if(pairingDevicePriorToConnection != null && pairingDevicePriorToConnection.equals(btDevice)){
-                    connectTo(btDevice);
+                    connectTo(btDevice.getName(), btDevice);
                 }
 
             } else if (state == BluetoothDevice.BOND_NONE && prevState == BluetoothDevice.BOND_BONDED){
@@ -255,10 +255,10 @@ public class BluetoothManager extends BroadcastReceiver{
      * If discovery is in progress, then the connection attempt will be significantly slowed and is more likely to fail.
      * @param btDevice
      */
-    public void connectTo(BluetoothDevice btDevice){
+    public void connectTo(String name, BluetoothDevice btDevice){
         mActivity.debugPrint("Connecting to " + btDevice.getName());
 
-        ClientThread clientThread = new ClientThread(this, btDevice);
+        ClientThread clientThread = new ClientThread(this, btDevice, name);
         clientThread.start();
     }
 
@@ -359,7 +359,7 @@ public class BluetoothManager extends BroadcastReceiver{
      * @param btSocket
      * @param remoteAddress
      */
-    public void manageConnectedSocket(BluetoothSocket btSocket, String remoteAddress){
+    public void manageConnectedSocket(String name, BluetoothSocket btSocket, String remoteAddress){
 
         if(remoteAddress!=null){
             //From clientThread
@@ -367,7 +367,7 @@ public class BluetoothManager extends BroadcastReceiver{
             ConnectedThread connectedThread = new ConnectedThread(this, btSocket, remoteAddress);
             connectedThread.start();
 
-            mRouter.setConnectedDevice(remoteAddress, connectedThread);
+            mRouter.setConnectedDevice(name, remoteAddress, connectedThread);
 
             padocManager.connectionSucceeded(remoteAddress);
 
@@ -388,7 +388,7 @@ public class BluetoothManager extends BroadcastReceiver{
         padocManager.connectionFailed(macAddress);
     }
 
-    public void connectWith(String btMacAddress){
+    public void connectWith(String name, String btMacAddress){
 
         Gson gson = new Gson();
 
@@ -396,7 +396,7 @@ public class BluetoothManager extends BroadcastReceiver{
         BluetoothDevice btDevice = gson.fromJson(jsonString, BluetoothDevice.class);
 
         if(pairedDevices.contains(btDevice)) {
-            connectTo(btDevice);
+            connectTo(name, btDevice);
         }else {
             pairingDevicePriorToConnection = btDevice;
             pairDevice(btDevice);
@@ -438,6 +438,10 @@ public class BluetoothManager extends BroadcastReceiver{
     //Getters
     public String getLocalBluetoothAddress(){
         return this.localAddress;
+    }
+
+    public String getLocalName(){
+        return btAdapter.getName();
     }
 
     public State getState(){

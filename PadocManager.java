@@ -11,6 +11,7 @@ import com.react.gabriel.wbam.padoc.bluetooth.BluetoothManager;
 import com.react.gabriel.wbam.padoc.wifidirect.WifiDirectManager;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,6 +37,8 @@ public class PadocManager {
 
     private boolean DBG = true;
     private MainActivity mActivity;
+
+    private String localName;
 
     private String localBluetoothAddress;
     private String localWDAddress;
@@ -64,13 +67,14 @@ public class PadocManager {
         //Bluetooth
         btManager = new BluetoothManager(mActivity, this);
         this.localBluetoothAddress = btManager.getLocalBluetoothAddress();
+        this.localName = btManager.getLocalName();
 
         //Router
         this.mRouter = new Router();
         btManager.setRouter(mRouter);
 
         //Messenger
-        this.mMessenger = new Messenger(mActivity, mRouter, localBluetoothAddress);
+        this.mMessenger = new Messenger(mActivity, mRouter, localBluetoothAddress, localName);
         btManager.setMessenger(mMessenger);
 
         btIntentFilter = new IntentFilter();
@@ -205,6 +209,10 @@ public class PadocManager {
         return localBluetoothAddress;
     }
 
+    public String getLocalName(){
+        return this.localName;
+    }
+
     //WifiDirect functions
 
     public void startWifiDirectService(){
@@ -227,7 +235,7 @@ public class PadocManager {
         wdManager.stopDiscovery();
     }
 
-    public void registerNewBluetoothAddress(String btAddress){
+    public void registerNewBluetoothAddress(String name, String btAddress){
         //Called when a new Padoc device is discovered through Wifi-Direct
 
 //        padocReadyDevices.add(btAddress);
@@ -238,7 +246,7 @@ public class PadocManager {
             //We should attempt a connection to this device.
 
             state = State.STATE_ATTEMPTING_CONNECTION;
-            btManager.connectWith(btAddress);
+            btManager.connectWith(name, btAddress);
         }else {
 //            wdManager.stopDiscovery();
 //            mActivity.debugPrint("Plop");
@@ -262,6 +270,15 @@ public class PadocManager {
         String[] array = new String[peers.size()];
 
         return peers.toArray(array);
+    }
+
+    public Set<Map.Entry<String, String>> getPeerNames(){
+
+        return mRouter.getPeerNamesAndHops();
+    }
+
+    public int getHopsFor(String address){
+        return mRouter.getHopsFor(address);
     }
 
     public void sendMsg(String address){

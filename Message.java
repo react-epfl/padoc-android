@@ -92,8 +92,10 @@ public class Message {
         }
     }
 
-    public static Message getIDMsg(String localAddress){
-        return new Message(Algo.IDProp, ContentType.ID, localAddress, localAddress, ALL, 0);
+    public static Message getIDMsg(String name, String localAddress){
+
+        String msgContent = localAddress+"-"+name;
+        return new Message(Algo.IDProp, ContentType.ID, msgContent, localAddress, ALL, 0);
     }
 
     public ContentType getContentType(){
