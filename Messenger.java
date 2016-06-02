@@ -93,18 +93,22 @@ public class Messenger {
 
             case IDProp:
 
+                String newAddress;
+                String sourceAddress;
+                int hops;
+
                 contentType = message.getContentType();
 
                 switch (contentType){
 
                     case ID:
-
+                        //This type of messages can come from clients (introducing themselves) or from anyone forwarding an ID message.
                         mActivity.debugPrint("Got ID");
 
-                        String newAddress = message.getMsg();
-                        String sourceAddress = message.getSource();
+                        newAddress = message.getMsg();
+                        sourceAddress = message.getSource();
 
-                        int hops = message.getHops();
+                        hops = message.getHops();
 
                         if(fromThread.isOrphan() && hops == 0 && sourceAddress.equals(newAddress)){
                             //ID msg is original (not a forward)
@@ -115,26 +119,51 @@ public class Messenger {
                             //Because the peer is new we should greet him with the necessary info
                             sendMeshInfoTo(newAddress);
 
-                            if(message.getDestination().equals(ALL)) {
-                                forwardBroadcastIDMsg(message, fromThread.getRemoteAddress());
-                            }
                         }
 
                         if(!fromThread.isOrphan() && (!mRouter.knows(newAddress) || (mRouter.knows(newAddress) && mRouter.getHopsFor(newAddress) > hops))){
-
                             //If we don't have this address registered yet, or if we do but this route is shorter, save it and broadcast.
+
+                            //TODO : why not use sourceAddress instead of getRemoteAddress()
                             mRouter.setRoute(newAddress, hops, fromThread.getRemoteAddress());
                             mActivity.debugPrint("Saved ID route");
 
-                            if(message.getDestination().equals(ALL)){
-                                forwardBroadcastIDMsg(message, fromThread.getRemoteAddress());
-                            }
                         }
+
+                        if(message.getDestination().equals(ALL)){
+                            forwardBroadcastIDMsg(message, fromThread.getRemoteAddress());
+                        }
+
                         break;
 
                     case IDS:
+                        //This type of messages only come from servers.
+                        mActivity.debugPrint("Got IDS");
 
-                        //TODO
+                        String newAddresses = message.getMsg();
+
+                        sourceAddress = message.getSource();
+
+                        int n = 0;
+
+                        for(String address : newAddresses.split(">")){
+                            String[] newAddressInfo = address.split("<");
+
+                            newAddress = newAddressInfo[0];
+                            hops = Integer.valueOf(newAddressInfo[1]);
+
+                            if(!mRouter.knows(newAddress) || (mRouter.knows(newAddress) && mRouter.getHopsFor(newAddress) > hops)){
+
+                                mRouter.setRoute(newAddress, hops, sourceAddress);
+                                n++;
+                            }
+                        }
+
+                        mActivity.debugPrint("Saved " + n + " new addresses");
+
+                        if(message.getDestination().equals(ALL)){
+                            forwardBroadcastIDMsg(message, fromThread.getRemoteAddress());
+                        }
 
                         break;
                 }
@@ -249,28 +278,32 @@ public class Messenger {
     public void sendMeshInfoTo(String newAddress){
         String knownPeersString = "";
 
+        int n = 0;
         for(Map.Entry<String, Pair<Integer, String>> knownPeer : mRouter.getKnownPeers()){
             String knownAddress = knownPeer.getKey();
 
             if(!knownAddress.equals(newAddress)){
-                knownPeersString += "<"+newAddress;
-            }
-        }
-
-        //TODO
-        Message knwonPeersMessage = new Message(Message.Algo.IDProp, Message.ContentType.IDS, knownPeersString, localBluetoothAddress, newAddress, 0);
-
-        for(Map.Entry<String, Pair<Integer, String>> knownPeer : mRouter.getKnownPeers()){
-            String knwonAddress = knownPeer.getKey();
-            if(!knwonAddress.equals(newAddress)){
-                mActivity.debugPrint("Sending peer : " + knwonAddress);
+                n++;
                 int hops = knownPeer.getValue().first+1;
-                Message message = new Message(Message.Algo.IDProp, Message.ContentType.ID, knwonAddress, localBluetoothAddress, newAddress, hops);
-                mRouter.getRoutingThreadFor(newAddress).write(message);
+                knownPeersString += knownAddress+"<"+hops+">";
             }
         }
 
+        if(n > 0){
+            Message knownPeersMessage = new Message(Message.Algo.IDProp, Message.ContentType.IDS, knownPeersString, localBluetoothAddress, newAddress, 0);
+            mActivity.debugPrint("Sending " + n + " known peers.");
+            mRouter.getRoutingThreadFor(newAddress).write(knownPeersMessage);
+        }
 
+//        for(Map.Entry<String, Pair<Integer, String>> knownPeer : mRouter.getKnownPeers()){
+//            String knwonAddress = knownPeer.getKey();
+//            if(!knwonAddress.equals(newAddress)){
+//                mActivity.debugPrint("Sending peer : " + knwonAddress);
+//                int hops = knownPeer.getValue().first+1;
+//                Message message = new Message(Message.Algo.IDProp, Message.ContentType.ID, knwonAddress, localBluetoothAddress, newAddress, hops);
+//                mRouter.getRoutingThreadFor(newAddress).write(message);
+//            }
+//        }
     }
 
     private void printMsg(Message message){
