@@ -57,7 +57,7 @@ public class WifiDirectManager extends BroadcastReceiver {
 //            this.wifiManager.setWifiEnabled(true);
 
             //Initialize the service object
-            this.wdService = new WifiDirectService(mActivity, this);
+            this.wdService = new WifiDirectService(mActivity);
 
             //Initialize the discovery object
             this.wdDiscovery = new WifiDirectDiscovery(mActivity, this);

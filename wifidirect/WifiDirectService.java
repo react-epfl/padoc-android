@@ -17,16 +17,14 @@ import java.util.Map;
 public class WifiDirectService {
 
     private final MainActivity mActivity;
-    private final WifiDirectManager wdManager;
     private final WifiP2pManager mManager;
     private final WifiP2pManager.Channel mChannel;
 
     private boolean serviceIsRunning = false;
 
-    public WifiDirectService(MainActivity mActivity, WifiDirectManager wdManager){
+    public WifiDirectService(MainActivity mActivity){
 
         this.mActivity = mActivity;
-        this.wdManager = wdManager;
         this.mManager = (WifiP2pManager) mActivity.getSystemService(Context.WIFI_P2P_SERVICE);
         this.mChannel = mManager.initialize(mActivity, mActivity.getMainLooper(), null);
 

@@ -2,8 +2,10 @@ package com.react.gabriel.wbam.padoc;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.os.Parcelable;
 import android.util.Pair;
 
 import com.react.gabriel.wbam.MainActivity;
@@ -64,6 +66,12 @@ public class PadocManager {
 
         this.mActivity = mActivity;
 
+        Intent intent = new Intent(this.mActivity.getBaseContext(), OnClearFromRecentService.class);
+
+//        intent.putExtra("padocManager", (Parcelable) this);
+
+        this.mActivity.startService(intent);
+
         //Bluetooth
         btManager = new BluetoothManager(mActivity, this);
         this.localBluetoothAddress = btManager.getLocalBluetoothAddress();
@@ -102,6 +110,7 @@ public class PadocManager {
         mActivity.registerReceiver(wdManager, wdIntentFilter);
 
         initialize();
+
 
     }
 
@@ -284,4 +293,5 @@ public class PadocManager {
     public UUID getPadocUUID(){
         return this.PADOC_UUID;
     }
+
 }

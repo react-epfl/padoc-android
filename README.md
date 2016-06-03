@@ -21,7 +21,7 @@ This is the ReadMe file for the Padoc library for Android
 * Implement mesh awarness
 	* Include mesh info in advertised service
 	* Send mesh info when connecting to server
-* __Stop service advertising when killing app__
+* ~~__Stop service advertising when killing app__~~ 
 * ~~Re-register service every so often. Otherwise if device is not scanning it won't be discovered. Weird.~~
 	* Problem lies in discovery, wifi reset solves it, for now...
 * ~~__Don't try to connect if another connection is being made__~~ OK
