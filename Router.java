@@ -127,4 +127,8 @@ public class Router {
         return connectedDevices.size();
     }
 
+    public boolean isConnectedTo(String btAddress){
+        return connectedDevices.containsKey(btAddress);
+    }
+
 }

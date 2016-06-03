@@ -173,7 +173,7 @@ public class Messenger {
                             }
                         }
 
-                        mActivity.debugPrint("Saved " + n + " new addresses");
+                        if(n > 0) mActivity.debugPrint("Saved " + n + " new addresses");
 
                         if(message.getDestination().equals(ALL)){
                             forwardBroadcastIDMsg(message, fromThread.getRemoteAddress());

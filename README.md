@@ -25,11 +25,11 @@ This is the ReadMe file for the Padoc library for Android
 * ~~Re-register service every so often. Otherwise if device is not scanning it won't be discovered. Weird.~~
 	* Problem lies in discovery, wifi reset solves it, for now...
 * ~~__Don't try to connect if another connection is being made__~~ OK
-* Pause server while attempting a connection
-* Stop service while attempting a connection
-* Detect or prevent double sockets
+	* Pause server while attempting a connection
+	* ~~Stop service while attempting a connection~~ OK
+	* Detect or prevent double sockets
 * ~~Clean discovery process~~ OK
 * Make app work when in background mode
-* ~~Send mesh peers to new peer in one message instead of many~~
+* ~~Send mesh peers to new peer in one message instead of many~~ OK
 * Verify if source address is known when receiving a message
 * Complete documentation

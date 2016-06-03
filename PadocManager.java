@@ -21,7 +21,7 @@ import java.util.UUID;
 public class PadocManager {
 
     private final UUID PADOC_UUID = UUID.fromString("aa40d6d0-16b0-11e6-bdf4-0800200c9a66");
-    private final int MIN_RECOMMENDED_CONNECTIONS = 1;
+    private final int MIN_RECOMMENDED_CONNECTIONS = 2;
     private final int MAX_RECOMMENDED_CONNECTIONS = 3;
     private String ALL = "ALL";
 
@@ -101,7 +101,7 @@ public class PadocManager {
 
         mActivity.registerReceiver(wdManager, wdIntentFilter);
 
-//        initialize();
+        initialize();
 
     }
 
@@ -131,37 +131,6 @@ public class PadocManager {
             //TODO
             this.state = State.STATE_RUNNING;
         }
-
-//
-//        if(btManager.isRunning() && wdManager.isRunning()){
-//            //BluetoothManager and WifiDirectManager initialized correctly
-//
-//            //Start Bluetooth server
-//            btManager.startServer();
-//
-//            //Start Wifi-Direct service
-//            wdManager.startService();
-//
-//            //Start Wifi-Direct scan
-//            wdManager.startDiscovery();
-//
-//        }
-
-        //Turn on if off
-
-        //Check Wifi-Direct status
-
-        //Turn on if off
-
-        //Start bluetooth server
-
-        //Start Wifi-Direct scan
-
-        //Start bluetooth scan
-
-    }
-
-    public void start(){
 
     }
 
@@ -235,17 +204,20 @@ public class PadocManager {
         wdManager.stopDiscovery();
     }
 
-    public void registerNewBluetoothAddress(String name, String btAddress){
+    public void handleNewWifiDirectDiscovery(String name, String btAddress){
         //Called when a new Padoc device is discovered through Wifi-Direct
 
 //        padocReadyDevices.add(btAddress);
-        //TODO : if this is the first addition to the set, start bluetooth discovery.
 
-        if(mRouter.numberOfActiveConnections() < MIN_RECOMMENDED_CONNECTIONS && !state.equals(State.STATE_ATTEMPTING_CONNECTION) && state.equals(State.STATE_RUNNING)){
+        if(!mRouter.isConnectedTo(btAddress)
+                && mRouter.numberOfActiveConnections() < MAX_RECOMMENDED_CONNECTIONS
+                && !state.equals(State.STATE_ATTEMPTING_CONNECTION)
+                && state.equals(State.STATE_RUNNING)){
             //We still don't have the minimum recommended number of connections.
             //We should attempt a connection to this device.
 
             state = State.STATE_ATTEMPTING_CONNECTION;
+            wdManager.stopService();
             btManager.connectWith(name, btAddress);
         }else {
 //            wdManager.stopDiscovery();
@@ -255,11 +227,20 @@ public class PadocManager {
 
     public void connectionSucceeded(String macAddress){
         mActivity.debugPrint("Connection to " + macAddress + " succeeded.");
+
+        if(mRouter.numberOfActiveConnections() >= MIN_RECOMMENDED_CONNECTIONS) {
+            //We are not looking to connect anymore, but we still accept connections
+
+            wdManager.stopDiscovery();
+        }
+
+        wdManager.startService(null);
         state = State.STATE_RUNNING;
     }
 
     public void connectionFailed(String macAddress){
         mActivity.debugPrint("ERROR : Connection to " + macAddress + " failed.");
+        wdManager.startService(null);
         state = State.STATE_RUNNING;
     }
 
