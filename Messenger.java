@@ -250,8 +250,11 @@ public class Messenger {
     public void forwardMsg(Message message){
 
         String destination = message.getDestination();
+        mActivity.debugPrint("Forwarding msg to " + destination);
+
         if(mRouter.knows(destination)){
             message.incrementHop();
+            mActivity.debugPrint("Going through : " + mRouter.getNameFor(mRouter.getRoutingAddressFor(destination)));
             mRouter.getRoutingThreadFor(destination).write(message);
 
         }else{

@@ -84,12 +84,6 @@ public class BluetoothManager extends BroadcastReceiver{
             //Initialize the server thread
 //            this.serverThread = new ServerThread(mActivity, this, btAdapter);
 
-            //TODO I should use these sometime and filter only WBAM paired devices
-            this.pairedDevices = btAdapter.getBondedDevices();
-            if(pairedDevices.size() > 0){
-                mActivity.debugPrint("Found " + pairedDevices.size() + " paired BT devices");
-            }
-
 //            this.isRunning = true;
         }
     }
@@ -119,6 +113,13 @@ public class BluetoothManager extends BroadcastReceiver{
             case STATE_ADAPTER_RUNNING :
 
                 state = State.STATE_SERVER_STARTING;
+
+
+                this.pairedDevices = btAdapter.getBondedDevices();
+                if(pairedDevices.size() > 0){
+                    mActivity.debugPrint("Found " + pairedDevices.size() + " paired BT devices");
+                }
+
                 serverThread = new ServerThread(mActivity, this, btAdapter);
 
                 initialize();

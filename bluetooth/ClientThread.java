@@ -63,7 +63,6 @@ public class ClientThread extends Thread {
         try {
             // Connect the device through the socket. This will block
             // until it succeeds or throws an exception
-            //TODO : exception takes too long, set timer
             connectionHandler.postDelayed(cancelConnection, TIMEOUT);
             mmSocket.connect();
 

@@ -285,7 +285,7 @@ public class PadocManager {
     //Temporary functions
 
     public void sendCBS(){
-        mMessenger.sendMsg("Hallo CBS", ALL);
+        mMessenger.sendMsg("Hallo CBS from " + localName, ALL);
     }
 
     //Getters

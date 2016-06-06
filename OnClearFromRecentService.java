@@ -7,7 +7,6 @@ import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.IBinder;
 
-
 /**
  * Created by gabriel on 03/06/16.
  */
