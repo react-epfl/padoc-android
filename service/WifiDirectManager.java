@@ -1,4 +1,4 @@
-package com.react.gabriel.wbam.padoc.wifidirect;
+package com.react.gabriel.wbam.padoc.service;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

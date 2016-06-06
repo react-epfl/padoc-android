@@ -1,11 +1,10 @@
-package com.react.gabriel.wbam.padoc.bluetooth;
+package com.react.gabriel.wbam.padoc.connection;
 
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 
 import java.io.IOException;
-import java.util.UUID;
 
 /**
  * Created by gabriel on 18/05/16.

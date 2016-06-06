@@ -5,12 +5,11 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.os.Parcelable;
 import android.util.Pair;
 
 import com.react.gabriel.wbam.MainActivity;
-import com.react.gabriel.wbam.padoc.bluetooth.BluetoothManager;
-import com.react.gabriel.wbam.padoc.wifidirect.WifiDirectManager;
+import com.react.gabriel.wbam.padoc.connection.BluetoothManager;
+import com.react.gabriel.wbam.padoc.service.WifiDirectManager;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -66,7 +65,7 @@ public class PadocManager {
 
         this.mActivity = mActivity;
 
-        Intent intent = new Intent(this.mActivity.getBaseContext(), OnClearFromRecentService.class);
+        Intent intent = new Intent(this.mActivity.getBaseContext(), Monitor.class);
 
 //        intent.putExtra("padocManager", (Parcelable) this);
 

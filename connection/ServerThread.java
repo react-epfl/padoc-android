@@ -1,4 +1,4 @@
-package com.react.gabriel.wbam.padoc.bluetooth;
+package com.react.gabriel.wbam.padoc.connection;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothServerSocket;

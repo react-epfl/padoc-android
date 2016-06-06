@@ -2,7 +2,7 @@ package com.react.gabriel.wbam.padoc;
 
 import android.util.Pair;
 
-import com.react.gabriel.wbam.padoc.bluetooth.ConnectedThread;
+import com.react.gabriel.wbam.padoc.connection.ConnectedThread;
 
 import java.util.Collection;
 import java.util.HashMap;

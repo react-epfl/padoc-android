@@ -1,4 +1,4 @@
-package com.react.gabriel.wbam.padoc.wifidirect;
+package com.react.gabriel.wbam.padoc.service;
 
 import android.content.Context;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -6,7 +6,6 @@ import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.net.wifi.p2p.nsd.WifiP2pServiceInfo;
 
 import com.react.gabriel.wbam.MainActivity;
-import com.react.gabriel.wbam.padoc.PadocManager;
 
 import java.util.HashMap;
 import java.util.Map;

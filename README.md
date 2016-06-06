@@ -20,6 +20,7 @@ This is the ReadMe file for the Padoc library for Android
 * ~~Sometimes, bluetooth cannot get the paired devices, throws : BT not enabled. Cannot create bond to Remote Device.~~
 * ~~Get Bluetooth and Wifi status when starting~~ OK
 * Remove time limit on Wifi-Direct discovery
+* __Implement customizable nearby app ID detection__
 * Implement mesh awarness
 	* Include mesh info in advertised service
 	* Send mesh info when connecting to server

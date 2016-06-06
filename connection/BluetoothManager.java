@@ -1,4 +1,4 @@
-package com.react.gabriel.wbam.padoc.bluetooth;
+package com.react.gabriel.wbam.padoc.connection;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -38,7 +38,6 @@ public class BluetoothManager extends BroadcastReceiver{
     private final PadocManager padocManager;
     private final BluetoothAdapter btAdapter;
     private final String localAddress;
-//    private final BluetoothDiscovery btDiscovery;
     private Messenger mMessenger;
     private Router mRouter;
 
@@ -70,21 +69,11 @@ public class BluetoothManager extends BroadcastReceiver{
         }else {
             //Device supports bluetooth
 
-            //Make sure Bluetooth is on
-//            btAdapter.enable();
-
             //Set the local MAC Bluetooth address
             this.localAddress = btAdapter.getAddress();
 
             mActivity.debugPrint("This device is " + localAddress);
 
-            //Initialize the discovery object
-//            this.btDiscovery = new BluetoothDiscovery(mActivity, btAdapter);
-
-            //Initialize the server thread
-//            this.serverThread = new ServerThread(mActivity, this, btAdapter);
-
-//            this.isRunning = true;
         }
     }
 

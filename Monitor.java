@@ -10,7 +10,7 @@ import android.os.IBinder;
 /**
  * Created by gabriel on 03/06/16.
  */
-public class OnClearFromRecentService extends Service {
+public class Monitor extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
