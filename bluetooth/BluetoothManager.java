@@ -313,6 +313,7 @@ public class BluetoothManager extends BroadcastReceiver{
             return true;
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println(e.toString());
             return false;
         }
     }
@@ -369,7 +370,7 @@ public class BluetoothManager extends BroadcastReceiver{
 
             mRouter.setConnectedDevice(name, remoteAddress, connectedThread);
 
-            padocManager.connectionSucceeded(remoteAddress);
+            padocManager.connectionSucceeded(name, remoteAddress);
 
             mMessenger.introduceMyselfToThread(connectedThread);
 
@@ -384,8 +385,8 @@ public class BluetoothManager extends BroadcastReceiver{
         }
     }
 
-    public void connectionFailed(String macAddress){
-        padocManager.connectionFailed(macAddress);
+    public void connectionFailed(String name, String macAddress){
+        padocManager.connectionFailed(name, macAddress);
     }
 
     public void connectWith(String name, String btMacAddress){

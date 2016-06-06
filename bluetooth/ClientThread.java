@@ -2,6 +2,7 @@ package com.react.gabriel.wbam.padoc.bluetooth;
 
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.os.Handler;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -32,6 +33,29 @@ public class ClientThread extends Thread {
         mmSocket = tmp;
     }
 
+    //Scanner handler
+    private Handler connectionHandler = new Handler();
+    //TODO: This number shouldn't be a constant.
+    private final int TIMEOUT = 5000;
+
+    //Scanner runnable
+    private Runnable cancelConnection = new Runnable() {
+        @Override
+        public void run() {
+
+            if(!mmSocket.isConnected()){
+                try {
+                    mmSocket.close();
+                    btManager.connectionFailed(serverName, serverAddress);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+        }
+    };
+
     public void run() {
         // Cancel discovery because it will slow down the connection
 //        if(btDiscovery.discoveryIsRunning) btDiscovery.stopDiscovery();
@@ -39,7 +63,10 @@ public class ClientThread extends Thread {
         try {
             // Connect the device through the socket. This will block
             // until it succeeds or throws an exception
+            //TODO : exception takes too long, set timer
+            connectionHandler.postDelayed(cancelConnection, TIMEOUT);
             mmSocket.connect();
+
         } catch (IOException connectException) {
             // Unable to connect; close the socket and get out
             try {
@@ -52,7 +79,7 @@ public class ClientThread extends Thread {
         if(mmSocket.isConnected()){
             btManager.manageConnectedSocket(serverName, mmSocket, serverAddress);
         }else {
-            btManager.connectionFailed(serverAddress);
+            btManager.connectionFailed(serverName, serverAddress);
         }
     }
 

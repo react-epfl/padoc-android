@@ -198,7 +198,6 @@ public class WifiDirectManager extends BroadcastReceiver {
     }
 
     public void handleNewWifiDirectDiscovery(String name, String btMacAddress){
-        //TODO : Need to try connecting directly with the btMacAddress, without bluetooth discovery
         padocManager.handleNewWifiDirectDiscovery(name, btMacAddress);
     }
 

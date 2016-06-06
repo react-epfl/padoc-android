@@ -9,7 +9,8 @@ This is the ReadMe file for the Padoc library for Android
 * ~~Integrate peer names and hops and make them available.~~
 * Detect and implement deconnections!
 * Implement priority peers/leaf nodes.
-* Detect when bluetooth pairing/connection did not work. (out of reach, etc)
+* ~~Detect when bluetooth pairing/connection did not work. (out of reach, etc)~~ OK
+* Keep record of faulty servers, attempt a maximum of 3 connections.
 * ~~Sometimes the server socket is null and crashes (listenusingrfcommwithservicerecord returns null)~~ OK
 * ~~Implement connection when the other device is already paired~~ OK
 * ~~Try connections without bluetooth discovery~~ OK

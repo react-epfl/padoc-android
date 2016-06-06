@@ -109,8 +109,7 @@ public class PadocManager {
 
         mActivity.registerReceiver(wdManager, wdIntentFilter);
 
-        initialize();
-
+//        initialize();
 
     }
 
@@ -234,8 +233,8 @@ public class PadocManager {
         }
     }
 
-    public void connectionSucceeded(String macAddress){
-        mActivity.debugPrint("Connection to " + macAddress + " succeeded.");
+    public void connectionSucceeded(String name, String macAddress){
+        mActivity.debugPrint("Connection to " + name + " (" + macAddress + ") succeeded.");
 
         if(mRouter.numberOfActiveConnections() >= MIN_RECOMMENDED_CONNECTIONS) {
             //We are not looking to connect anymore, but we still accept connections
@@ -247,8 +246,9 @@ public class PadocManager {
         state = State.STATE_RUNNING;
     }
 
-    public void connectionFailed(String macAddress){
-        mActivity.debugPrint("ERROR : Connection to " + macAddress + " failed.");
+    public void connectionFailed(String name, String macAddress){
+        //TODO : Need to add faulty server to list. Make 3 attempts max.
+        mActivity.debugPrint("ERROR : Connection to " + name + " (" + macAddress + ") failed.");
         wdManager.startService(null);
         state = State.STATE_RUNNING;
     }
