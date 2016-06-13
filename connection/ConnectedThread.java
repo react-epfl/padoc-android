@@ -50,8 +50,8 @@ public class ConnectedThread extends Thread {
                 //Without Handler
                 bytes = mmInStream.read(buffer);
                 String jsonString = new String(buffer, 0, bytes);
-                Message message = new Message(jsonString);
-                btManager.deliverMsg(message, this);
+                Message message = new Message();
+                if(message.setMessage(jsonString))  btManager.deliverMsg(message, this);
 
             } catch (IOException e) {
                 break;
@@ -62,7 +62,7 @@ public class ConnectedThread extends Thread {
     /* Call this from the main activity to send data to the remote device */
     public void write(Message message) {
         try {
-            System.out.println("Sending " + message.toString());
+//            System.out.println("Sending " + message.toString());
             byte[] bytes = message.toString().getBytes();
             mmOutStream.write(bytes);
         } catch (IOException e) { }

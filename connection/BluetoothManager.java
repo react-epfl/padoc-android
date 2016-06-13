@@ -360,7 +360,7 @@ public class BluetoothManager extends BroadcastReceiver{
 
             mRouter.setConnectedDevice(name, remoteAddress, connectedThread);
 
-            padocManager.connectionSucceeded(name, remoteAddress);
+            padocManager.connectionToServerSucceeded(name, remoteAddress);
 
             mMessenger.introduceMyselfToThread(connectedThread);
 
@@ -371,7 +371,8 @@ public class BluetoothManager extends BroadcastReceiver{
             connectedThread.start();
 
             mRouter.setOrphanThread(connectedThread);
-            mActivity.debugPrint("Unidentified peer just connected.");
+
+            mActivity.debugPrint("Unidentified peer connected.");
         }
     }
 

@@ -35,7 +35,7 @@ public class ClientThread extends Thread {
     //Scanner handler
     private Handler connectionHandler = new Handler();
     //TODO: This number shouldn't be a constant.
-    private final int TIMEOUT = 5000;
+    private final int TIMEOUT = 10000;
 
     //Scanner runnable
     private Runnable cancelConnection = new Runnable() {

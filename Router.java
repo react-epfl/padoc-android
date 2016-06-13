@@ -53,6 +53,11 @@ public class Router {
         }
     }
 
+    public boolean setOrphanThread(ConnectedThread connectedThread) {
+
+        return orphanDevices.add(connectedThread);
+    }
+
     public boolean knows(String remoteAddress){
 
         return route.containsKey(remoteAddress);
@@ -83,11 +88,6 @@ public class Router {
 
         setRoute(name, remoteAddress, 0, remoteAddress);
         return connectedDevices.put(remoteAddress, connectedThread);
-    }
-
-    public boolean setOrphanThread(ConnectedThread connectedThread) {
-
-        return orphanDevices.add(connectedThread);
     }
 
     public Set<Map.Entry<String, ConnectedThread>> getConnectedEntries(){

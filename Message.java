@@ -15,9 +15,9 @@ public class Message {
 
     //Type of algorithm used
     private static final String ALGO = "algo";
+    private static final String ALGO_FLOOD = "algo-flood";
     private static final String ALGO_CBS = "algo-cbs";
-    private static final String ALGO_SINGLE = "algo-single";
-    private static final String ALGO_ID_PROP = "algo-id-prop";
+    private static final String ALGO_SINGLE = "algo-route";
 
     //Type of content
     private static final String CONTENT = "content";
@@ -42,7 +42,7 @@ public class Message {
     }
 
     public enum Algo {
-        CBS, IDProp, SINGLE;
+        FLOOD, CBS, ROUTE;
     }
 
     private JSONObject jsonMsg = null;
@@ -55,12 +55,12 @@ public class Message {
             jsonMsg.put(ID, UUID.randomUUID());
 
             //Algo
-            if(algo.equals(Algo.SINGLE)){
+            if(algo.equals(Algo.ROUTE)){
                 jsonMsg.put(ALGO, ALGO_SINGLE);
             }else if(algo.equals(Algo.CBS)){
                 jsonMsg.put(ALGO, ALGO_CBS);
-            }else if(algo.equals(Algo.IDProp)){
-                jsonMsg.put(ALGO, ALGO_ID_PROP);
+            }else if(algo.equals(Algo.FLOOD)){
+                jsonMsg.put(ALGO, ALGO_FLOOD);
             }
 
             //ContentType
@@ -83,19 +83,27 @@ public class Message {
         }
     }
 
-    public Message(String jsonString){
+    public Message(){};
+
+    public boolean setMessage(String jsonString){
         //TODO : need to verify content
+        boolean validJSONString = false;
         try{
             this.jsonMsg = new JSONObject(jsonString);
+            validJSONString = true;
         }catch (JSONException e){
             e.printStackTrace();
+            System.out.println("Error from jsonString: ");
+            System.out.println(jsonString);
         }
+
+        return validJSONString;
     }
 
     public static Message getIDMsg(String name, String localAddress){
 
         String msgContent = localAddress+"-"+name;
-        return new Message(Algo.IDProp, ContentType.ID, msgContent, localAddress, ALL, 0);
+        return new Message(Algo.FLOOD, ContentType.ID, msgContent, localAddress, ALL, 0);
     }
 
     public ContentType getContentType(){
@@ -133,9 +141,9 @@ public class Message {
             case ALGO_CBS:
                 return Algo.CBS;
             case ALGO_SINGLE:
-                return Algo.SINGLE;
-            case ALGO_ID_PROP:
-                return  Algo.IDProp;
+                return Algo.ROUTE;
+            case ALGO_FLOOD:
+                return  Algo.FLOOD;
             default: return null;
         }
     }

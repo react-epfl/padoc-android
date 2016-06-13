@@ -5,11 +5,12 @@ package com.react.gabriel.wbam.padoc;
  */
 public class CBSThread extends Thread {
 
-    //In CBS, 0 < RAD < cbsMaxRAD
+    //In CBS, 0 < RAD < CBS_MAX_RAD
     //TODO : RAD should not be the same for every device, should it?
     //TODO : Sometimes when in triangle both RADs finish and both resend the info to each other, one of these will resend the CBS to the source
-    //TODO : need to keep trace of the msg even after having sent it. In case we receive it again, like in the triangle configuration
-    private static final int cbsMaxRAD = 2000;
+    //TODO : need to keep trace of the msg even after having sent it. In case we receive it again, like in the
+    // triangle configuration
+    private static final int CBS_MAX_RAD = 2000;
     //TODO : Customize this value also
     private int nMax = 2;
     private int rad;
@@ -21,7 +22,7 @@ public class CBSThread extends Thread {
 
         this.mMessenger = mMessenger;
         this.message = message;
-        this.rad = (int)(Math.random() * cbsMaxRAD);
+        this.rad = (int)(Math.random() * CBS_MAX_RAD);
 
     }
 
@@ -29,7 +30,7 @@ public class CBSThread extends Thread {
 
         final String uuid = message.getUUID();
 
-        System.out.println("RAD is : " + rad);
+//        System.out.println("RAD is : " + rad);
 
         try{
             Thread.sleep(rad);
@@ -40,13 +41,20 @@ public class CBSThread extends Thread {
         //How many duplicates?
         int n = mMessenger.getCBSCountForMsg(uuid);
 
-        System.out.println("Count is n = " + n);
+//        System.out.println("Count is n = " + n);
 
         if(n<nMax) {
-            mMessenger.forwardBroadcast(message, mMessenger.getCBSBannedListForMsg(uuid));
+            mMessenger.forwardCBS(message, mMessenger.getCBSBannedListForMsg(uuid));
         }
 
-        mMessenger.clearCBSTrack(uuid);
+        //TODO
+//        try{
+//            Thread.sleep(rad);
+//        }catch (InterruptedException e){
+//            e.printStackTrace();
+//        }
+//
+//        mMessenger.clearCBSTrack(uuid);
     }
 
 }

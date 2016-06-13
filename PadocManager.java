@@ -22,8 +22,8 @@ import java.util.UUID;
 public class PadocManager {
 
     private final UUID PADOC_UUID = UUID.fromString("aa40d6d0-16b0-11e6-bdf4-0800200c9a66");
-    private final int MIN_RECOMMENDED_CONNECTIONS = 2;
-    private final int MAX_RECOMMENDED_CONNECTIONS = 3;
+    private final int MIN_RECOMMENDED_CONNECTIONS = 9;
+    private final int MAX_RECOMMENDED_CONNECTIONS = 10;
     private String ALL = "ALL";
 
     public enum State{
@@ -31,7 +31,8 @@ public class PadocManager {
         STATE_BLUETOOTH_RUNNING,
         STATE_WIFI_P2P_RUNNING,
         STATE_RUNNING,
-        STATE_ATTEMPTING_CONNECTION;
+        STATE_ATTEMPTING_CONNECTION,
+        STATE_RECEIVING_CONNECTION;
     }
 
     private State state = State.STATE_NULL;
@@ -81,7 +82,7 @@ public class PadocManager {
         btManager.setRouter(mRouter);
 
         //Messenger
-        this.mMessenger = new Messenger(mActivity, mRouter, localBluetoothAddress, localName);
+        this.mMessenger = new Messenger(mActivity, this, mRouter, localBluetoothAddress, localName);
         btManager.setMessenger(mMessenger);
 
         btIntentFilter = new IntentFilter();
@@ -109,7 +110,11 @@ public class PadocManager {
         mActivity.registerReceiver(wdManager, wdIntentFilter);
 
 //        initialize();
+    }
 
+    public void onDestroy(){
+        mActivity.unregisterReceiver(btManager);
+        mActivity.unregisterReceiver(wdManager);
     }
 
     //PADOC functions
@@ -144,12 +149,6 @@ public class PadocManager {
 //    public boolean verifyPadocAddress(String address){
 //        return padocReadyDevices.contains(address);
 //    }
-
-
-
-
-
-
 
     //Bluetooth functions
 
@@ -211,6 +210,13 @@ public class PadocManager {
         wdManager.stopDiscovery();
     }
 
+//    public void receivedNewConnection() {
+//        //TODO
+//        state = State.STATE_RECEIVING_CONNECTION;
+//        wdManager.stopService();
+//        wdManager.stopDiscovery();
+//    }
+
     public void handleNewWifiDirectDiscovery(String name, String btAddress){
         //Called when a new Padoc device is discovered through Wifi-Direct
 
@@ -232,7 +238,7 @@ public class PadocManager {
         }
     }
 
-    public void connectionSucceeded(String name, String macAddress){
+    public void connectionToServerSucceeded(String name, String macAddress){
         mActivity.debugPrint("Connection to " + name + " (" + macAddress + ") succeeded.");
 
         if(mRouter.numberOfActiveConnections() >= MIN_RECOMMENDED_CONNECTIONS) {
@@ -243,6 +249,12 @@ public class PadocManager {
 
         wdManager.startService(null);
         state = State.STATE_RUNNING;
+    }
+
+    public void connectionFromClientSucceeded(){
+        if(mRouter.numberOfActiveConnections() >= MIN_RECOMMENDED_CONNECTIONS){
+            wdManager.stopDiscovery();
+        }
     }
 
     public void connectionFailed(String name, String macAddress){
@@ -272,7 +284,7 @@ public class PadocManager {
 
     public void sendMsg(String address){
         String msg = "Hello World";
-        mMessenger.sendMsg(msg, address);
+        mMessenger.sendMsg(msg, address, Message.Algo.ROUTE);
     }
 
     //Debug functions
@@ -284,13 +296,30 @@ public class PadocManager {
     //Temporary functions
 
     public void sendCBS(){
-        mMessenger.sendMsg("Hallo CBS from " + localName, ALL);
+        mMessenger.sendMsg("Hallo CBS from " + localName, ALL, Message.Algo.CBS);
+    }
+
+    public void sendFLOOD(){
+        mMessenger.sendMsg("Test FLOOD from " + localName, ALL, Message.Algo.FLOOD);
+    }
+
+    public void sendMsgToBlack04(){
+        String msg = "Hello World";
+        mMessenger.sendMsg(msg, "B4:74:43:45:EB:78", Message.Algo.ROUTE);
     }
 
     //Getters
 
     public UUID getPadocUUID(){
         return this.PADOC_UUID;
+    }
+
+    public void showTestResults(){
+        mMessenger.printMessageCount();
+    }
+
+    public void clearMessageCount(){
+        mMessenger.clearMessageCount();
     }
 
 }
