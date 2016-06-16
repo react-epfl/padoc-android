@@ -51,6 +51,7 @@ public class BluetoothManager extends BroadcastReceiver{
     private ServerThread serverThread = null;
 
     private BluetoothDevice pairingDevicePriorToConnection = null;
+    private String joiningMesh = null;
 
     public BluetoothManager(MainActivity activity, PadocManager padocManager){
 
@@ -188,7 +189,7 @@ public class BluetoothManager extends BroadcastReceiver{
             if (state == BluetoothDevice.BOND_BONDED && prevState == BluetoothDevice.BOND_BONDING) {
                 mActivity.debugPrint("Paired " + btDevice.getName());
                 if(pairingDevicePriorToConnection != null && pairingDevicePriorToConnection.equals(btDevice)){
-                    connectTo(btDevice.getName(), btDevice);
+                    connectTo(joiningMesh, btDevice.getName(), btDevice);
                 }
 
             } else if (state == BluetoothDevice.BOND_NONE && prevState == BluetoothDevice.BOND_BONDED){
@@ -245,10 +246,10 @@ public class BluetoothManager extends BroadcastReceiver{
      * If discovery is in progress, then the connection attempt will be significantly slowed and is more likely to fail.
      * @param btDevice
      */
-    public void connectTo(String name, BluetoothDevice btDevice){
+    public void connectTo(String meshUUID, String name, BluetoothDevice btDevice){
         mActivity.debugPrint("Connecting to " + btDevice.getName());
 
-        ClientThread clientThread = new ClientThread(this, btDevice, name);
+        ClientThread clientThread = new ClientThread(this, meshUUID, btDevice, name);
         clientThread.start();
     }
 
@@ -350,37 +351,34 @@ public class BluetoothManager extends BroadcastReceiver{
      * @param btSocket
      * @param remoteAddress
      */
-    public void manageConnectedSocket(String name, BluetoothSocket btSocket, String remoteAddress){
+    public void manageConnectedSocket(String mesh, String name, BluetoothSocket btSocket, String remoteAddress){
 
         if(remoteAddress!=null){
             //From clientThread
 
-            ConnectedThread connectedThread = new ConnectedThread(this, btSocket, remoteAddress);
+            ConnectedThread connectedThread = new ConnectedThread(mActivity, this, btSocket, remoteAddress);
             connectedThread.start();
 
-            mRouter.setConnectedDevice(name, remoteAddress, connectedThread);
-
-            padocManager.connectionToServerSucceeded(name, remoteAddress);
-
-            mMessenger.introduceMyselfToThread(connectedThread);
+            padocManager.connectionToServerSucceeded(mesh, name, remoteAddress, connectedThread);
 
         }else{
             //From serverThread
 
-            ConnectedThread connectedThread = new ConnectedThread(this, btSocket, null);
+            ConnectedThread connectedThread = new ConnectedThread(mActivity, this, btSocket, null);
             connectedThread.start();
 
-            mRouter.setOrphanThread(connectedThread);
+            padocManager.receivedNewConnectionFromRemoteClient(connectedThread);
+//            mRouter.setOrphanThread(connectedThread);
 
             mActivity.debugPrint("Unidentified peer connected.");
         }
     }
 
-    public void connectionFailed(String name, String macAddress){
-        padocManager.connectionFailed(name, macAddress);
+    public void connectionFromLocalClientFailed(String mesh, String name, String macAddress){
+        padocManager.connectionFromLocalClientFailed(mesh, name, macAddress);
     }
 
-    public void connectWith(String name, String btMacAddress){
+    public void attemptConnectionWith(String meshUUID, String name, String btMacAddress){
 
         Gson gson = new Gson();
 
@@ -388,9 +386,10 @@ public class BluetoothManager extends BroadcastReceiver{
         BluetoothDevice btDevice = gson.fromJson(jsonString, BluetoothDevice.class);
 
         if(pairedDevices.contains(btDevice)) {
-            connectTo(name, btDevice);
+            connectTo(meshUUID, name, btDevice);
         }else {
             pairingDevicePriorToConnection = btDevice;
+            joiningMesh = meshUUID;
             pairDevice(btDevice);
         }
 

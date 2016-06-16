@@ -9,6 +9,7 @@ import com.react.gabriel.wbam.MainActivity;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Created by gabriel on 25/05/16.
@@ -33,10 +34,12 @@ public class WifiDirectService {
      * When specifying custom actionListener, do not forget to set serviceIsRunning
      * @param actionListener
      */
-    public void startService(String btName, String btMAC, WifiP2pManager.ActionListener actionListener) {
+    public void startService(String meshUUID, String btName, String btMAC, WifiP2pManager.ActionListener actionListener) {
         if(!serviceIsRunning){
             Map<String, String> values = new HashMap<String, String>();
             //http://files.dns-sd.org/draft-cheshire-dnsext-dns-sd.txt | Sections 6.5 & 6.6
+
+            values.put(WifiDirectManager.BTMESH, meshUUID);
             values.put(WifiDirectManager.BTMAC, btMAC);
             values.put(WifiDirectManager.BTNAME, btName);
 

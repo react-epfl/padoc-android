@@ -13,12 +13,14 @@ public class ClientThread extends Thread {
 
     private final BluetoothManager btManager;
     private final BluetoothSocket mmSocket;
+    private final String serverMesh;
     private final String serverAddress;
     private final String serverName;
 
-    public ClientThread(BluetoothManager btManager, BluetoothDevice device, String name) {
+    public ClientThread(BluetoothManager btManager, String meshUUID, BluetoothDevice device, String name) {
 
         this.btManager = btManager;
+        this.serverMesh = meshUUID;
         this.serverAddress = device.getAddress();
         this.serverName = name;
         // Use a temporary object that is later assigned to mmSocket because mmSocket is final
@@ -45,7 +47,7 @@ public class ClientThread extends Thread {
             if(!mmSocket.isConnected()){
                 try {
                     mmSocket.close();
-                    btManager.connectionFailed(serverName, serverAddress);
+                    btManager.connectionFromLocalClientFailed(serverMesh, serverName, serverAddress);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -75,9 +77,9 @@ public class ClientThread extends Thread {
 
         // Do work to manage the connection (in a separate thread)
         if(mmSocket.isConnected()){
-            btManager.manageConnectedSocket(serverName, mmSocket, serverAddress);
+            btManager.manageConnectedSocket(serverMesh, serverName, mmSocket, serverAddress);
         }else {
-            btManager.connectionFailed(serverName, serverAddress);
+            btManager.connectionFromLocalClientFailed(serverMesh, serverName, serverAddress);
         }
     }
 

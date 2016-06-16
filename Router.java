@@ -17,8 +17,6 @@ public class Router {
 
     public final int ADDRESS_UNKNOWN = -1;
 
-    //here are the devices that connected through the server thread and still need to be identified
-    private Set<ConnectedThread> orphanDevices = null;
     //connectedDevices<macAddress, connectedThread> These are the devices directly connected to us
     private Map<String, ConnectedThread> connectedDevices = null;
     //route<destinationAddress, <hops, routingAddress>>
@@ -31,32 +29,25 @@ public class Router {
     public Router(){
 
         this.connectedDevices = new HashMap<String, ConnectedThread>();
-        this.orphanDevices = new HashSet<>();
         this.route = new HashMap<String, Pair<Integer, String>>();
 
     }
 
-    public boolean threadIsConsideredOrphan(ConnectedThread thread){
-        return orphanDevices.contains(thread);
+//    public boolean threadIsConsideredOrphan(ConnectedThread thread){
+//        return orphanDevices.contains(thread);
+//    }
+
+    public void createNewEntry(ConnectedThread connectedThread, String remoteAddress, String name){
+
+        connectedThread.setRemoteAddress(remoteAddress);
+        connectedDevices.put(remoteAddress, connectedThread);
+        setRoute(name, remoteAddress, 0, remoteAddress);
+
     }
 
-    public void identifyOrphanThread(String name, ConnectedThread connectedThread, String remoteAddress){
-        if(threadIsConsideredOrphan(connectedThread)){
-
-            connectedThread.setRemoteAddress(remoteAddress);
-            connectedDevices.put(remoteAddress, connectedThread);
-            setRoute(name, remoteAddress, 0, remoteAddress);
-            orphanDevices.remove(connectedThread);
-
-        }else{
-            System.out.println("Error, thread is not considered orphan");
-        }
-    }
-
-    public boolean setOrphanThread(ConnectedThread connectedThread) {
-
-        return orphanDevices.add(connectedThread);
-    }
+//    public boolean setOrphanThread(ConnectedThread connectedThread) {
+//        return orphanDevices.add(connectedThread);
+//    }
 
     public boolean knows(String remoteAddress){
 

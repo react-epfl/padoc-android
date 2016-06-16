@@ -1,9 +1,15 @@
 package com.react.gabriel.wbam.padoc;
 
 import android.util.Pair;
+import android.view.MotionEvent;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.react.gabriel.wbam.MainActivity;
 import com.react.gabriel.wbam.padoc.connection.ConnectedThread;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,7 +21,6 @@ import java.util.Set;
  */
 public class Messenger {
 
-    private static final String ALL = "ALL";
 
     private MainActivity mActivity = null;
     private PadocManager padocManager;
@@ -56,9 +61,10 @@ public class Messenger {
 
             case FLOOD:
 
-                String[] newAddressInfo;
-                String newAddress;
-                String newName;
+//                String[] newAddressInfo;
+                String newAddress = null;
+                String newName = null;
+                String newMesh = null;
                 String sourceAddress;
                 int hops;
 
@@ -66,13 +72,29 @@ public class Messenger {
 
                 switch (contentType){
 
+
                     case ID:
                         //This type of messages can come from clients (introducing themselves) or from anyone forwarding an ID message.
 //                        mActivity.debugPrint("Got ID");
 
-                        newAddressInfo = message.getMsg().split("-");
-                        newAddress = newAddressInfo[0];
-                        newName = newAddressInfo[1];
+                        try{
+                            JSONObject jsonMessage = new JSONObject(message.getMsg());
+                            newAddress = jsonMessage.getString(Message.ADDRESS);
+                            newName = jsonMessage.getString(Message.NAME);
+                            newMesh = jsonMessage.getString(Message.MESH);
+                        }catch (JSONException e){
+                            e.printStackTrace();
+                        }
+
+                        if (newAddress == null || newName == null || newMesh == null){
+                            mActivity.debugPrint("ERROR : could not get message fields.");
+                            break;
+                        }
+
+//                        newAddressInfo = message.getMsg().split("-");
+//                        newAddress = newAddressInfo[0];
+//                        newName = newAddressInfo[1];
+
                         sourceAddress = message.getSource();
 
                         hops = message.getHops();
@@ -80,16 +102,9 @@ public class Messenger {
                         if(fromThread.isOrphan() && hops == 0 && sourceAddress.equals(newAddress)){
                             //ID msg is original (not a forward)
 
-                            mRouter.identifyOrphanThread(newName, fromThread, newAddress);
+                            padocManager.connectionFromRemoteClientSucceeded(fromThread, newAddress, newName, newMesh);
 
-                            padocManager.connectionFromClientSucceeded();
-
-                            mActivity.debugPrint("Identified peer to : " + newName);
-
-                            //Because the peer is new we should greet him with the necessary info
-                            sendMeshInfoTo(newAddress);
-
-                            if(message.getDestination().equals(ALL)){
+                            if(message.getDestination().equals(Message.ALL)){
                                 forwardBroadcastFLOODMsg(message, fromThread.getRemoteAddress());
                             }
 
@@ -102,7 +117,7 @@ public class Messenger {
                             mRouter.setRoute(newName, newAddress, hops, fromThread.getRemoteAddress());
                             mActivity.debugPrint("Saved route to : " + newName);
 
-                            if(message.getDestination().equals(ALL)){
+                            if(message.getDestination().equals(Message.ALL)){
                                 forwardBroadcastFLOODMsg(message, fromThread.getRemoteAddress());
                             }
 
@@ -123,7 +138,7 @@ public class Messenger {
 
                         for(String address : newAddresses.split(">")){
 
-                            newAddressInfo = address.split("<");
+                            String[] newAddressInfo = address.split("<");
 
                             String[] newMacAndName = newAddressInfo[0].split("-");
                             newAddress = newMacAndName[0];
@@ -139,7 +154,7 @@ public class Messenger {
 
                         if(n > 0) mActivity.debugPrint("Saved " + n + " new addresses");
 
-                        if(message.getDestination().equals(ALL)){
+                        if(message.getDestination().equals(Message.ALL)){
                             forwardBroadcastFLOODMsg(message, fromThread.getRemoteAddress());
                         }
 
@@ -155,7 +170,7 @@ public class Messenger {
 
                             floodMsgTracker.add(msgID);
 
-                            if(destination.equals(ALL) || destination.equals(localBluetoothAddress)){
+                            if(destination.equals(Message.ALL) || destination.equals(localBluetoothAddress)){
                                 printMsg(message);
                             }
 
@@ -185,15 +200,20 @@ public class Messenger {
 
                     new CBSThread(this, message).start();
 
-                    if(destination.equals(localBluetoothAddress) || destination.equals(ALL)) printMsg(message);
+                    if(destination.equals(localBluetoothAddress) || destination.equals(Message.ALL)){
+                        printMsg(message);
+                        mActivity.debugPrint("From : " + mRouter.getNameFor(fromThread.getRemoteAddress()));
+                    }
 
                 }else{
                     //We are in RAD, msg has already been received, increment counter by one.
                     Set sources = cbsMsgTracker.get(msgID);
 //                    mActivity.debugPrint("Got CBS again");
 
-                    if(!sources.contains(fromThread.getRemoteAddress())){
-                        sources.add(fromThread.getRemoteAddress());
+                    String source = fromThread.getRemoteAddress();
+
+                    if(!sources.contains(source)){
+                        sources.add(source);
                         cbsMsgTracker.put(msgID, sources);
                     }else {
                         mActivity.debugPrint("ERROR : Got duplicate CBS from same source");
@@ -216,7 +236,7 @@ public class Messenger {
                     //This is not the final destination of the message, forward it.
                     forwardMsg(message);
 
-                }else if(destination.equals(ALL)){
+                }else if(destination.equals(Message.ALL)){
                     mActivity.debugPrint("ERROR : Got malformed message, ROUTE algorithm cannot be used to deliver to ALL");
 
                 }else {
@@ -241,7 +261,7 @@ public class Messenger {
 
     public void broadcastMsg(Message message){
 
-        if(message.getDestination().equals(ALL)){
+        if(message.getDestination().equals(Message.ALL)){
 
             for(ConnectedThread connectedThread : mRouter.getConnectedThreads()){
                 connectedThread.write(message);
@@ -298,9 +318,9 @@ public class Messenger {
 
         Message message;
 
-        if(destination.equals(ALL) && !algo.equals(Message.Algo.ROUTE)){
+        if(destination.equals(Message.ALL) && !algo.equals(Message.Algo.ROUTE)){
 
-            message = new Message(algo, Message.ContentType.MSG, msg, localBluetoothAddress, ALL, 0);
+            message = new Message(algo, Message.ContentType.MSG, msg, localBluetoothAddress, Message.ALL, 0);
 
             switch (algo) {
                 case FLOOD:
@@ -316,6 +336,7 @@ public class Messenger {
                     cbsMsgTracker.put(message.getUUID(), localSourceSet);
                     break;
             }
+
             for(ConnectedThread connectedThread : mRouter.getConnectedThreads()){
                 connectedThread.write(message);
             }
@@ -363,7 +384,7 @@ public class Messenger {
 
     public void introduceMyselfToThread(ConnectedThread connectedThread){
         mActivity.debugPrint("Sending my ID");
-        Message IDMessage = Message.getIDMsg(localName, localBluetoothAddress);
+        Message IDMessage = Message.getIDMsg(localBluetoothAddress, localName, padocManager.getMeshUUID());
         connectedThread.write(IDMessage);
     }
 
@@ -430,6 +451,6 @@ public class Messenger {
 
         addEvaluationResults(sourceAddress);
 
-//        mActivity.debugPrint(mRouter.getNameFor(sourceAddress) + " (" + mRouter.getHopsFor(sourceAddress) + ") : " + message.getMsg());
+        mActivity.debugPrint(mRouter.getNameFor(sourceAddress) + " (" + mRouter.getHopsFor(sourceAddress) + ") (" + message.getHops() + ") : " + message.getMsg());
     }
 }

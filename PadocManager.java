@@ -9,6 +9,7 @@ import android.util.Pair;
 
 import com.react.gabriel.wbam.MainActivity;
 import com.react.gabriel.wbam.padoc.connection.BluetoothManager;
+import com.react.gabriel.wbam.padoc.connection.ConnectedThread;
 import com.react.gabriel.wbam.padoc.service.WifiDirectManager;
 
 import java.util.HashSet;
@@ -22,9 +23,10 @@ import java.util.UUID;
 public class PadocManager {
 
     private final UUID PADOC_UUID = UUID.fromString("aa40d6d0-16b0-11e6-bdf4-0800200c9a66");
-    private final int MIN_RECOMMENDED_CONNECTIONS = 9;
-    private final int MAX_RECOMMENDED_CONNECTIONS = 10;
+    private final int MIN_RECOMMENDED_CONNECTIONS = 2;
+    private final int MAX_RECOMMENDED_CONNECTIONS = 7;
     private String ALL = "ALL";
+    private static final String NO_MESH = "-1";
 
     public enum State{
         STATE_NULL,
@@ -41,6 +43,7 @@ public class PadocManager {
     private MainActivity mActivity;
 
     private String localName;
+    private String meshUUID = NO_MESH;
 
     private String localBluetoothAddress;
     private String localWDAddress;
@@ -55,6 +58,9 @@ public class PadocManager {
     //WifiDirect
     private WifiDirectManager wdManager;
     private IntentFilter wdIntentFilter;
+
+    private ConnectedThread currentOrphanThread;
+    private IncomingConnectionThread incomingConnectionThread;
 
     //Set containing addresses running PADOC
 //    private Set<String> padocReadyDevices = new HashSet<String>();
@@ -146,19 +152,44 @@ public class PadocManager {
 
     }
 
-//    public boolean verifyPadocAddress(String address){
-//        return padocReadyDevices.contains(address);
-//    }
+    private void setState(State state){
 
-    //Bluetooth functions
+        switch (state) {
 
-//    public void startBluetoothDiscovery(){
-//        btManager.startDiscovery();
-//    }
-//
-//    public void stopBluetoothDiscovery(){
-//        btManager.stopDiscovery();
-//    }
+            case STATE_NULL:
+                break;
+            case STATE_BLUETOOTH_RUNNING:
+                break;
+            case STATE_WIFI_P2P_RUNNING:
+                break;
+            case STATE_RUNNING:
+
+                wdManager.startService(null);
+                this.state = State.STATE_RUNNING;
+
+                if(this.isInMesh() && mRouter.numberOfActiveConnections() >= MIN_RECOMMENDED_CONNECTIONS){
+                    wdManager.stopDiscovery();
+                }
+
+                break;
+            case STATE_ATTEMPTING_CONNECTION:
+
+                wdManager.stopService();
+//                wdManager.stopDiscovery();
+                this.state = State.STATE_ATTEMPTING_CONNECTION;
+
+                break;
+
+            case STATE_RECEIVING_CONNECTION:
+
+                wdManager.stopService();
+//                wdManager.stopDiscovery();
+
+                this.state = State.STATE_RECEIVING_CONNECTION;
+
+                break;
+        }
+    }
 
     public void setBluetoothVisible(){
         btManager.setVisible();
@@ -188,6 +219,14 @@ public class PadocManager {
         return this.localName;
     }
 
+    public String getMeshUUID(){
+        return meshUUID;
+    }
+
+    public boolean isInMesh(){
+        return !meshUUID.equals(NO_MESH);
+    }
+
     //WifiDirect functions
 
     public void startWifiDirectService(){
@@ -210,58 +249,178 @@ public class PadocManager {
         wdManager.stopDiscovery();
     }
 
-//    public void receivedNewConnection() {
-//        //TODO
-//        state = State.STATE_RECEIVING_CONNECTION;
-//        wdManager.stopService();
-//        wdManager.stopDiscovery();
-//    }
-
-    public void handleNewWifiDirectDiscovery(String name, String btAddress){
+    public void handleNewPadocDiscovery(String btAddress, String name, String meshUUID){
         //Called when a new Padoc device is discovered through Wifi-Direct
 
-//        padocReadyDevices.add(btAddress);
+        if(!this.isInMesh() && meshUUID.equals(NO_MESH)){
+            mActivity.debugPrint("No one has mesh");
+            //TODO : complete
+            //Should be the only available peer, No mesh should be available at this moment.
 
-        if(!mRouter.isConnectedTo(btAddress)
-                && mRouter.numberOfActiveConnections() < MAX_RECOMMENDED_CONNECTIONS
-                && !state.equals(State.STATE_ATTEMPTING_CONNECTION)
-                && state.equals(State.STATE_RUNNING)){
-            //We still don't have the minimum recommended number of connections.
-            //We should attempt a connection to this device.
+            if(!mRouter.isConnectedTo(btAddress)
+                    && mRouter.numberOfActiveConnections() < MAX_RECOMMENDED_CONNECTIONS
+//                    && !state.equals(State.STATE_ATTEMPTING_CONNECTION)
+                    && state.equals(State.STATE_RUNNING)){
+                //We still don't have the minimum recommended number of connections.
+                //We should attempt a connection to this device.
 
-            state = State.STATE_ATTEMPTING_CONNECTION;
-            wdManager.stopService();
-            btManager.connectWith(name, btAddress);
-        }else {
+                this.setState(State.STATE_ATTEMPTING_CONNECTION);
+
+                btManager.attemptConnectionWith(NO_MESH, name, btAddress);
+
+            }else {
+                //We should be attempting or receiving a connection.
+                //Discovery should not be enabled now.
+
+//            wdManager.stopDiscovery();
+
+            }
+        }else if(!this.isInMesh() && !meshUUID.equals(NO_MESH)){
+//            mActivity.debugPrint("He is in mesh, we are not.");
+            //We are alone and the discovered peer is part of a mesh. We should connect to it.
+
+            if(!mRouter.isConnectedTo(btAddress)
+                    && mRouter.numberOfActiveConnections() < MAX_RECOMMENDED_CONNECTIONS
+//                    && !state.equals(State.STATE_ATTEMPTING_CONNECTION)
+                    && state.equals(State.STATE_RUNNING)){
+                //We still don't have the minimum recommended number of connections.
+                //We should attempt a connection to this device.
+
+                this.setState(State.STATE_ATTEMPTING_CONNECTION);
+
+                btManager.attemptConnectionWith(meshUUID, name, btAddress);
+
+            }else {
 //            wdManager.stopDiscovery();
 //            mActivity.debugPrint("Plop");
+            }
+        }else if(this.isInMesh() && !meshUUID.equals(NO_MESH)){
+//            mActivity.debugPrint("He both are in mesh");
+
+            if(this.meshUUID.equals(meshUUID)) {
+//                mActivity.debugPrint("And it is the same.");
+                //We discovered a peer that is within the same mesh as us.
+
+                if (!mRouter.isConnectedTo(btAddress)
+                        && mRouter.numberOfActiveConnections() < MAX_RECOMMENDED_CONNECTIONS
+                        && state.equals(State.STATE_RUNNING)) {
+                    //We still don't have the minimum recommended number of connections.
+                    //We should attempt a connection to this device.
+
+                    this.setState(State.STATE_ATTEMPTING_CONNECTION);
+
+                    btManager.attemptConnectionWith(meshUUID, name, btAddress);
+
+                }
+
+            }else {
+                //We discovered a peer that is part of another mesh
+                mActivity.debugPrint("WHAT DO, MESHES");
+            }
         }
     }
 
-    public void connectionToServerSucceeded(String name, String macAddress){
-        mActivity.debugPrint("Connection to " + name + " (" + macAddress + ") succeeded.");
+    public void connectionToServerSucceeded(String meshUUID, String name, String macAddress, ConnectedThread connectedThread){
 
-        if(mRouter.numberOfActiveConnections() >= MIN_RECOMMENDED_CONNECTIONS) {
-            //We are not looking to connect anymore, but we still accept connections
-
-            wdManager.stopDiscovery();
+        //If mesh is NO_MESH then we just formed a new mesh and
+        //server is waiting for us to send a new meshUUID
+        if(meshUUID.equals(NO_MESH)){
+            this.meshUUID = UUID.randomUUID().toString();
+            mActivity.debugPrint("New mesh created : " + this.meshUUID + " and sent");
+        }else {
+            this.meshUUID = meshUUID;
         }
 
-        wdManager.startService(null);
-        state = State.STATE_RUNNING;
+        mRouter.setConnectedDevice(name, macAddress, connectedThread);
+
+        mMessenger.introduceMyselfToThread(connectedThread);
+
+        mActivity.debugPrint("Connection to " + name + " succeeded.");
+
+        this.setState(State.STATE_RUNNING);
     }
 
-    public void connectionFromClientSucceeded(){
-        if(mRouter.numberOfActiveConnections() >= MIN_RECOMMENDED_CONNECTIONS){
-            wdManager.stopDiscovery();
+    public void receivedNewConnectionFromRemoteClient(ConnectedThread connectedThread){
+        //We are waiting for the client's ID
+
+        //TODO block all other connections temporarily
+
+        if(currentOrphanThread == null){
+            this.setState(State.STATE_RECEIVING_CONNECTION);
+            currentOrphanThread = connectedThread;
+            if(incomingConnectionThread == null){
+                incomingConnectionThread = new IncomingConnectionThread(this, connectedThread);
+            }else{
+                mActivity.debugPrint("ERROR : incomingConnectionThread should be null if currentOrphanThread is null");
+            }
+
+        }else {
+            mActivity.debugPrint("ERROR : previous client connection has not been cleared yet.");
+        }
+
+    }
+
+    public void connectionFromRemoteClientTimedOut(ConnectedThread connectedThread){
+        if(currentOrphanThread != null && currentOrphanThread.equals(connectedThread) && incomingConnectionThread != null){
+
+            currentOrphanThread = null;
+            incomingConnectionThread.interrupt();
+            incomingConnectionThread = null;
+            this.setState(State.STATE_RUNNING);
+        }else {
+            mActivity.debugPrint("ERRPR : Something bad happened.");
         }
     }
 
-    public void connectionFailed(String name, String macAddress){
+    public void connectionFromRemoteClientSucceeded(ConnectedThread connectedThread, String newAddress, String newName, String newMesh){
+
+        if(currentOrphanThread != null && currentOrphanThread.equals(connectedThread)){
+
+
+            mRouter.createNewEntry(connectedThread, newAddress, newName);
+            currentOrphanThread = null;
+
+            if(incomingConnectionThread != null){
+                incomingConnectionThread = null;
+            }else{
+                mActivity.debugPrint("ERROR : incomingConnectionThread should also be null");
+            }
+
+            mActivity.debugPrint("Identified peer to : " + newName);
+
+            if( meshUUID.equals(NO_MESH) && newMesh.equals(NO_MESH)){
+                //ERROR, should not happen.
+                mActivity.debugPrint("ERROR : there should be a mesh");
+            }else if(meshUUID.equals(NO_MESH) && !newMesh.equals(NO_MESH)){
+                //We are forming a new mesh
+                meshUUID = newMesh;
+                mActivity.debugPrint("New mesh created : " + meshUUID);
+            }else if(!meshUUID.equals(NO_MESH) && newMesh.equals(NO_MESH)){
+                //ERROR, should not happen.
+                mActivity.debugPrint("ERROR : there should be a mesh 2");
+            }else if(!meshUUID.equals(NO_MESH) && !newMesh.equals(NO_MESH)){
+                if(meshUUID.equals(newMesh)){
+                    mActivity.debugPrint("New connection has been established");
+                    //Because the connection is valid and new we should greet him with the necessary info
+                    mMessenger.sendMeshInfoTo(newAddress);
+                }else{
+                    mActivity.debugPrint("TODO : Are we joining meshes?");
+                }
+            }
+
+            this.setState(State.STATE_RUNNING);
+
+        }else {
+            mActivity.debugPrint("ERROR : Connection from remote client succeeded but we don't have a currentOrphanThread.");
+        }
+
+    }
+
+    public void connectionFromLocalClientFailed(String mesh, String name, String macAddress){
         //TODO : Need to add faulty server to list. Make 3 attempts max.
-        mActivity.debugPrint("ERROR : Connection to " + name + " (" + macAddress + ") failed.");
-        wdManager.startService(null);
-        state = State.STATE_RUNNING;
+        mActivity.debugPrint("ERROR : Connection to " + name + " (" + mesh + ") failed.");
+
+        this.setState(State.STATE_RUNNING);
     }
 
     public String[] getPeers(){

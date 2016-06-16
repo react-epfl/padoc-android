@@ -1,5 +1,7 @@
 package com.react.gabriel.wbam.padoc;
 
+import com.google.gson.JsonObject;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -26,10 +28,15 @@ public class Message {
     private static final String CONTENT_MSG = "content-msg";
     private static final String CONTENT_PRIORITY = "content-priority";
 
+    //Content fields
+    public static final String ADDRESS = "addr";
+    public static final String NAME = "name";
+    public static final String MESH = "mesh";
+
     //Source and destination fields
     private static final String SOURCE = "source";
     private static final String DESTINATION = "destination";
-    private static final String ALL = "ALL";
+    public static final String ALL = "ALL";
 
     //Number of hops. This is the only field that changes with every forward.
     private static final String HOPS = "hops";
@@ -100,10 +107,23 @@ public class Message {
         return validJSONString;
     }
 
-    public static Message getIDMsg(String name, String localAddress){
+    public static Message getIDMsg(String localAddress, String name, String mesh){
 
-        String msgContent = localAddress+"-"+name;
-        return new Message(Algo.FLOOD, ContentType.ID, msgContent, localAddress, ALL, 0);
+//        String msgContent = localAddress+"-"+name;
+
+        JSONObject jsonMessageContent = new JSONObject();
+
+        try {
+
+            jsonMessageContent.put(ADDRESS, localAddress);
+            jsonMessageContent.put(NAME, name);
+            jsonMessageContent.put(MESH, mesh);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return new Message(Algo.FLOOD, ContentType.ID, jsonMessageContent.toString(), localAddress, ALL, 0);
     }
 
     public ContentType getContentType(){

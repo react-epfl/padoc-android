@@ -14,7 +14,6 @@ import java.io.IOException;
 public class ServerThread extends Thread {
 
     private final String PADOC_SERVICE = "padoc-service";
-    private final int maxClientsConnections = 7;
 
     private final MainActivity mActivity;
     private final BluetoothManager btManager;
@@ -47,7 +46,7 @@ public class ServerThread extends Thread {
         BluetoothSocket socket = null;
         int n = 0;
         // Keep listening until 4 connections are accepted
-        while (n < maxClientsConnections) {
+        while (true) {
             mActivity.debugPrint("Waiting for client #" + n);
             try {
                 if(mmServerSocket != null){
@@ -60,8 +59,9 @@ public class ServerThread extends Thread {
             }
             // If a connection was accepted
             if (socket != null) {
+
                 // Do work to manage the connection (in a separate thread)
-                btManager.manageConnectedSocket(null, socket, null);
+                btManager.manageConnectedSocket(null, null, socket, null);
                 n++;
             }
         }

@@ -2,6 +2,7 @@ package com.react.gabriel.wbam.padoc.connection;
 
 import android.bluetooth.BluetoothSocket;
 
+import com.react.gabriel.wbam.MainActivity;
 import com.react.gabriel.wbam.padoc.Message;
 
 import java.io.IOException;
@@ -19,8 +20,11 @@ public class ConnectedThread extends Thread {
     private final OutputStream mmOutStream;
     private String remoteAddress;
 
-    public ConnectedThread(BluetoothManager btManager, BluetoothSocket socket, String remoteAddress) {
+    private MainActivity mActivity;
 
+    public ConnectedThread(MainActivity mainActivity, BluetoothManager btManager, BluetoothSocket socket, String remoteAddress) {
+
+        this.mActivity = mainActivity;
         this.btManager = btManager;
         this.mmSocket = socket;
         this.remoteAddress = remoteAddress;
@@ -50,8 +54,11 @@ public class ConnectedThread extends Thread {
                 //Without Handler
                 bytes = mmInStream.read(buffer);
                 String jsonString = new String(buffer, 0, bytes);
+                mActivity.debugPrint("Socket is conn? : " + mmSocket.isConnected());
+                mActivity.debugPrint("BUFF : " + jsonString);
                 Message message = new Message();
                 if(message.setMessage(jsonString))  btManager.deliverMsg(message, this);
+
 
             } catch (IOException e) {
                 break;
@@ -64,6 +71,8 @@ public class ConnectedThread extends Thread {
         try {
 //            System.out.println("Sending " + message.toString());
             byte[] bytes = message.toString().getBytes();
+            mActivity.debugPrint("Sending out : " + message.toString());
+            mActivity.debugPrint("Socket is connected ? " + mmSocket.isConnected());
             mmOutStream.write(bytes);
         } catch (IOException e) { }
     }

@@ -35,7 +35,7 @@ public class WifiDirectDiscovery {
     //Scanner handler
     private Handler discoveryHandler = new Handler();
     //TODO: This number shouldn't be a constant.
-    private final int DELAY = 5000;
+    private final int DELAY = 15000;
 
     //Scanner runnable
     private Runnable runDiscovery = new Runnable() {
@@ -73,11 +73,14 @@ public class WifiDirectDiscovery {
 
                 String btMac = (String) record.get(WifiDirectManager.BTMAC);
                 String btName = (String) record.get(WifiDirectManager.BTNAME);
+                String btMesh = (String) record.get(WifiDirectManager.BTMESH);
+
+//                mActivity.debugPrint("on mesh " + btMesh);
 
                 if(fullDomain.contains("padoc") && btMac != null){
                     //This device is using Padoc
 
-                    wdManager.handleNewWifiDirectDiscovery(btName, btMac);
+                    wdManager.handleNewPadocDiscovery(btMac, btName, btMesh);
                 }
             }
         };
