@@ -37,7 +37,7 @@ public class ClientThread extends Thread {
     //Scanner handler
     private Handler connectionHandler = new Handler();
     //TODO: This number shouldn't be a constant.
-    private final int TIMEOUT = 10000;
+    private final int TIMEOUT = 15000;
 
     //Scanner runnable
     private Runnable cancelConnection = new Runnable() {
@@ -47,7 +47,7 @@ public class ClientThread extends Thread {
             if(!mmSocket.isConnected()){
                 try {
                     mmSocket.close();
-                    btManager.connectionFromLocalClientFailed(serverMesh, serverName, serverAddress);
+                    btManager.connectionToRemoteServerFailed(serverMesh, serverName, serverAddress);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -79,7 +79,7 @@ public class ClientThread extends Thread {
         if(mmSocket.isConnected()){
             btManager.manageConnectedSocket(serverMesh, serverName, mmSocket, serverAddress);
         }else {
-            btManager.connectionFromLocalClientFailed(serverMesh, serverName, serverAddress);
+            btManager.connectionToRemoteServerFailed(serverMesh, serverName, serverAddress);
         }
     }
 

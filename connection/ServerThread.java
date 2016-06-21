@@ -47,7 +47,7 @@ public class ServerThread extends Thread {
         int n = 0;
         // Keep listening until 4 connections are accepted
         while (true) {
-            mActivity.debugPrint("Waiting for client #" + n);
+//            mActivity.debugPrint("Waiting for client #" + n);
             try {
                 if(mmServerSocket != null){
                     socket = mmServerSocket.accept();

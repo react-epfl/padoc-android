@@ -54,8 +54,8 @@ public class ConnectedThread extends Thread {
                 //Without Handler
                 bytes = mmInStream.read(buffer);
                 String jsonString = new String(buffer, 0, bytes);
-                mActivity.debugPrint("Socket is conn? : " + mmSocket.isConnected());
-                mActivity.debugPrint("BUFF : " + jsonString);
+//                mActivity.debugPrint("Socket is conn? : " + mmSocket.isConnected());
+//                mActivity.debugPrint("BUFF : " + jsonString);
                 Message message = new Message();
                 if(message.setMessage(jsonString))  btManager.deliverMsg(message, this);
 
@@ -71,8 +71,8 @@ public class ConnectedThread extends Thread {
         try {
 //            System.out.println("Sending " + message.toString());
             byte[] bytes = message.toString().getBytes();
-            mActivity.debugPrint("Sending out : " + message.toString());
-            mActivity.debugPrint("Socket is connected ? " + mmSocket.isConnected());
+//            mActivity.debugPrint("Sending out : " + message.toString());
+//            mActivity.debugPrint("Socket is connected ? " + mmSocket.isConnected());
             mmOutStream.write(bytes);
         } catch (IOException e) { }
     }

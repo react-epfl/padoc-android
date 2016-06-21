@@ -359,7 +359,7 @@ public class BluetoothManager extends BroadcastReceiver{
             ConnectedThread connectedThread = new ConnectedThread(mActivity, this, btSocket, remoteAddress);
             connectedThread.start();
 
-            padocManager.connectionToServerSucceeded(mesh, name, remoteAddress, connectedThread);
+            padocManager.connectionToRemoteServerSucceeded(mesh, name, remoteAddress, connectedThread);
 
         }else{
             //From serverThread
@@ -374,8 +374,8 @@ public class BluetoothManager extends BroadcastReceiver{
         }
     }
 
-    public void connectionFromLocalClientFailed(String mesh, String name, String macAddress){
-        padocManager.connectionFromLocalClientFailed(mesh, name, macAddress);
+    public void connectionToRemoteServerFailed(String mesh, String name, String macAddress){
+        padocManager.connectionToRemoteServerFailed(mesh, name, macAddress);
     }
 
     public void attemptConnectionWith(String meshUUID, String name, String btMacAddress){

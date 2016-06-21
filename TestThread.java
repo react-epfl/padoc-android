@@ -16,7 +16,7 @@ public class TestThread {
 
     //120 messages per minute for 10 minutes
     private final int TICK_TIME = 2000;
-    private final int TOTAL_TIME = 62000;
+    private final int TOTAL_TIME = 602000;
 
 
     private MainActivity mActivity;

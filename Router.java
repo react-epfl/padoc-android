@@ -1,12 +1,11 @@
 package com.react.gabriel.wbam.padoc;
 
-import android.util.Pair;
-
 import com.react.gabriel.wbam.padoc.connection.ConnectedThread;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -17,68 +16,114 @@ public class Router {
 
     public final int ADDRESS_UNKNOWN = -1;
 
+    private PadocManager padocManager;
+
     //connectedDevices<macAddress, connectedThread> These are the devices directly connected to us
     private Map<String, ConnectedThread> connectedDevices = null;
-    //route<destinationAddress, <hops, routingAddress>>
-    private Map<String, Pair<Integer, String>> route = null;
-    //peerNames<address, name>
-    private Map<String, String> peerNames = new HashMap<String, String>();
-    //peerNames<address, hops>
-    private Map<String, Integer> peerHops = new HashMap<String, Integer>();
+    //ackLog<macAddress, receivedACK>
+    private Map<String, Boolean> ackLog;
+    //routes<destinationAddress, Set<possibleRoutes>>
+    private Map<String, Set<String>> routes = null;
+    //hops<destinationAddress@routingAddress, hops>
+    private Map<String, Integer> hops = new HashMap<String, Integer>();
+    //shortestRoute<destinationAddress, shortestRoutingAddress>
+    private Map<String, String> shortestRoute = new HashMap<String, String>();
+    //names<address, name>
+    private Map<String, String> names = new HashMap<String, String>();
 
-    public Router(){
+    public Router(PadocManager padocManager){
 
+        this.padocManager = padocManager;
         this.connectedDevices = new HashMap<String, ConnectedThread>();
-        this.route = new HashMap<String, Pair<Integer, String>>();
+        this.routes = new HashMap<String, Set<String>>();
+        this.hops = new HashMap<String, Integer>();
+        this.ackLog = new HashMap<String, Boolean>();
 
     }
 
-//    public boolean threadIsConsideredOrphan(ConnectedThread thread){
-//        return orphanDevices.contains(thread);
-//    }
+    public void createNewDirectConnection(ConnectedThread connectedThread, String remoteAddress, String name){
 
-    public void createNewEntry(ConnectedThread connectedThread, String remoteAddress, String name){
-
-        connectedThread.setRemoteAddress(remoteAddress);
         connectedDevices.put(remoteAddress, connectedThread);
         setRoute(name, remoteAddress, 0, remoteAddress);
 
+        ackLog.put(remoteAddress, true);
+
     }
 
-//    public boolean setOrphanThread(ConnectedThread connectedThread) {
-//        return orphanDevices.add(connectedThread);
-//    }
+    public void setRoute(String name, String destinationAddress, int hops, String routingAddress){
+
+        String hopsKey = destinationAddress+"@"+routingAddress;
+
+        if(routes.containsKey(destinationAddress)){
+            //We already know this Peer, thus we have at least one routing address for this destination
+
+            Set<String> gateways = routes.get(destinationAddress);
+
+            if(gateways.contains(routingAddress) && this.hops.get(hopsKey) > hops){
+                //This specific gateway is already known, but this time it has less hops.
+
+                //update the number of hops for this specific route
+                this.hops.put(hopsKey, hops);
+
+                if(hopsForShortestRouteTo(destinationAddress) > hops){
+                    //This new route is actually shorter than the previous shortest one.
+
+                    //Update the shortest route
+                    this.shortestRoute.put(destinationAddress, routingAddress);
+
+                }
+            }else if(!gateways.contains(routingAddress)){
+                //We now have a new possible gateway for this destination
+
+                gateways.add(routingAddress);
+                this.hops.put(hopsKey, hops);
+
+                if(hopsForShortestRouteTo(destinationAddress) > hops){
+                    //This new gateway is actually the shortest one
+
+                    //Update the shortest route
+                    this.shortestRoute.put(destinationAddress, routingAddress);
+                }
+
+            }
+        }else {
+            //This is a new Peer, hence a new route
+
+            Set<String> routingSet = new HashSet<String>();
+            routingSet.add(routingAddress);
+
+            routes.put(destinationAddress, routingSet);
+            shortestRoute.put(destinationAddress, routingAddress);
+            this.hops.put(hopsKey, hops);
+            names.put(destinationAddress, name);
+
+        }
+    }
+
+    public int hopsForShortestRouteTo(String destinationAddress){
+        return hops.get(destinationAddress+"@"+shortestRoute.get(destinationAddress));
+    }
 
     public boolean knows(String remoteAddress){
 
-        return route.containsKey(remoteAddress);
+        return routes.containsKey(remoteAddress);
+    }
+
+    public int numberOfActiveConnections(){
+        return connectedDevices.size();
     }
 
     public int getHopsFor(String remoteAddress){
-        if(route.containsKey(remoteAddress)){
-            return route.get(remoteAddress).first;
+
+        if(routes.containsKey(remoteAddress)){
+            return hopsForShortestRouteTo(remoteAddress);
         }else {
             return ADDRESS_UNKNOWN;
         }
     }
 
-    public Pair<Integer, String> setRoute(String name, String destinationAddress, int hops, String routeAddress){
-
-        peerNames.put(destinationAddress, name);
-        peerHops.put(destinationAddress, hops);
-        return route.put(destinationAddress, new Pair<Integer, String>(hops, routeAddress));
-    }
-
     public ConnectedThread getRoutingThreadFor(String address){
-
-        String routingAddress = route.get(address).second;
-        return connectedDevices.get(routingAddress);
-    }
-
-    public ConnectedThread setConnectedDevice(String name, String remoteAddress, ConnectedThread connectedThread){
-
-        setRoute(name, remoteAddress, 0, remoteAddress);
-        return connectedDevices.put(remoteAddress, connectedThread);
+        return connectedDevices.get(shortestRoute.get(address));
     }
 
     public Set<Map.Entry<String, ConnectedThread>> getConnectedEntries(){
@@ -89,37 +134,209 @@ public class Router {
         return connectedDevices.values();
     }
 
-    public Set<Map.Entry<String, Pair<Integer, String>>> getKnownPeers(){
-        return route.entrySet();
-    }
-
     public Set<String> getPeers(){
-        return route.keySet();
+        return routes.keySet();
     }
 
     public String getNameFor(String address){
-        return peerNames.get(address);
+        return names.get(address);
     }
 
-    public Set<java.util.Map.Entry<String, String>> getPeerNamesAndHops(){
+    public Set<java.util.Map.Entry<String, String>> getPeerNames(){
 
-        return peerNames.entrySet();
-
-//        String[] array = new String[peerNames.values().size()];
-//
-//        return peerNames.values().toArray(array);
+        return names.entrySet();
     }
 
     public String getRoutingAddressFor(String address){
-        return route.get(address).second;
-    }
-
-    public int numberOfActiveConnections(){
-        return connectedDevices.size();
+        return shortestRoute.get(address);
     }
 
     public boolean isConnectedTo(String btAddress){
         return connectedDevices.containsKey(btAddress);
+    }
+
+    public void requestACKs(String localAddress){
+
+        for(ConnectedThread connectedThread : getConnectedThreads()){
+            connectedThread.write(Message.getACKRequestMessage(localAddress, connectedThread.getRemoteAddress()));
+        }
+
+    }
+
+    public void resetACKLog(){
+
+        ackLog.clear();
+
+        for (String address : connectedDevices.keySet()){
+
+            ackLog.put(address, false);
+        }
+    }
+
+    public void cleanUpDirectConnections(){
+
+        int n = 0;
+
+        for(String offlineGateway : ackLog.keySet()){
+
+            if(!ackLog.get(offlineGateway)){
+                //If we did not get an ACK we assume the peer disconnected, we need to clean everything Up.
+
+                if (connectedDevices.containsKey(offlineGateway)){
+                    //Should always be true
+
+                    String offlineGatewayName = getNameFor(offlineGateway);
+                    padocManager.debugPrint("Lost direct connection to " + offlineGatewayName);
+
+                    //Remove the device from connectedDevices
+                    connectedDevices.remove(offlineGateway);
+
+                    //TODO : Maybe this peer is still reachable through other gateways.
+                    //Remove the corresponding routing entry
+                    routes.remove(offlineGateway);
+                    //Remove the shortest route
+                    shortestRoute.remove(offlineGateway);
+                    //Remove the corresponding hops entry
+                    hops.remove(offlineGateway+"@"+offlineGateway);
+                    //Remove the corresponding name entry
+                    names.remove(offlineGateway);
+
+                    //TODO : need to notify other direct connections of this peer's disconnection
+
+                    padocManager.lostConnectionToPeer(offlineGateway);
+
+                    //CleanUp routes, shortestRoute, hops, and names.
+                    for(Iterator<Map.Entry<String, Set<String>>> entryIterator = routes.entrySet().iterator(); entryIterator.hasNext();){
+                        //We check for any destinationAddress that has a route involving the gateway that just went offline
+
+                        Map.Entry<String, Set<String>> entry = entryIterator.next();
+                        String destinationAddress = entry.getKey();
+                        Set<String> gateways = entry.getValue();
+
+                        if(gateways.contains(offlineGateway)) {
+//                            peerIsNotReachableThroughGateway(destinationAddress, offlineGateway);
+
+                            gateways.remove(offlineGateway);
+                            entry.setValue(gateways);
+
+
+                            //Remove the corresponding hops entry
+                            this.hops.remove(destinationAddress+"@"+offlineGateway);
+
+                            padocManager.debugPrint("Route " + getNameFor(destinationAddress) + "@" + offlineGatewayName + " has been removed 0");
+
+                            if(gateways.size() == 0){
+                                //This was the only gateway to this peer, we should remove this peer as well.
+
+                                padocManager.debugPrint(getNameFor(destinationAddress) + " is not reachable anymore 0");
+
+//                                routes.remove(destinationAddress);
+                                entryIterator.remove();
+                                shortestRoute.remove(destinationAddress);
+                                hops.remove(destinationAddress+"@"+offlineGateway);
+                                names.remove(destinationAddress);
+
+                            }else if(getRoutingAddressFor(destinationAddress).equals(offlineGateway)){
+                                //This was not the only gateway to this destination but it was the shortest one
+
+                                Set<String> remainingGateways = routes.get(destinationAddress);
+
+                                String newShortestRoute = new String();
+                                int lessHops = Integer.MAX_VALUE;
+
+                                for(String gateway : remainingGateways){
+                                    int gatewayHops = hops.get(destinationAddress+"@"+gateway);
+                                    if (gatewayHops < lessHops){
+
+                                        lessHops = gatewayHops;
+                                        newShortestRoute = gateway;
+                                    }
+                                }
+
+                                shortestRoute.put(destinationAddress, newShortestRoute);
+                                hops.put(destinationAddress, lessHops);
+
+                            }
+                        }
+                    }
+
+                }else{
+                    padocManager.debugPrint("ERROR : connectedDevices does not have entry to be deleted");
+                }
+
+                if (connectedDevices.size() == 0){
+                    //This device no longer has active connections.
+                    padocManager.lostConnectionToMesh();
+                }
+            }else {
+                //If we did get an ACK we increment the counter.
+                n++;
+            }
+        }
+
+        if( n != connectedDevices.size()){
+            padocManager.debugPrint("ERROR : number of ACKs received (" + n + ") and number of Connected Devices (" + connectedDevices.size() + ") do not match.");
+        }
+    }
+
+    public boolean peerGoesThroughGateway(String peer, String gateway){
+        return hops.containsKey(peer+"@"+gateway);
+    }
+
+    public void peerIsNotReachableThroughGateway(String peerAddress, String gatewayAddress){
+        //Need to check if it was the only gateway or not
+
+//        padocManager.debugPrint(routes.toString());
+        if(routes.get(peerAddress) != null && routes.get(peerAddress).contains(gatewayAddress)){
+            //Should always be true
+
+            //Remove the gateway from the set
+            routes.get(peerAddress).remove(gatewayAddress);
+            //Remove the corresponding hops entry
+            this.hops.remove(peerAddress+"@"+gatewayAddress);
+
+            padocManager.debugPrint("Route " + getNameFor(peerAddress) + "@" + getNameFor(gatewayAddress) + " has been removed");
+
+            if(routes.get(peerAddress).size() == 0){
+                //This was the only gateway to this peer, we should remove this peer as well.
+
+                padocManager.debugPrint(getNameFor(peerAddress) + " is not reachable anymore");
+
+                routes.remove(peerAddress);
+                shortestRoute.remove(peerAddress);
+                hops.remove(peerAddress+"@"+gatewayAddress);
+                names.remove(peerAddress);
+
+
+            }else if(getRoutingAddressFor(peerAddress).equals(gatewayAddress)){
+                //This was not the only gateway to this destination but it was the shortest one
+
+                Set<String> remainingGateways = routes.get(peerAddress);
+
+                String newShortestRoute = new String();
+                int lessHops = Integer.MAX_VALUE;
+
+                for(String gateway : remainingGateways){
+                    int gatewayHops = hops.get(peerAddress+"@"+gateway);
+                    if (gatewayHops < lessHops){
+
+                        lessHops = gatewayHops;
+                        newShortestRoute = gateway;
+                    }
+                }
+
+                shortestRoute.put(peerAddress, newShortestRoute);
+                hops.put(peerAddress, lessHops);
+
+            }
+
+        }else {
+            padocManager.debugPrint("ERROR : routes does not have this entry");
+        }
+    }
+
+    public void receivedACKFrom(String address){
+        ackLog.put(address, true);
     }
 
 }

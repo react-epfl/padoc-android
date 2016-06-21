@@ -1,10 +1,5 @@
 package com.react.gabriel.wbam.padoc;
 
-import android.util.Pair;
-import android.view.MotionEvent;
-
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.react.gabriel.wbam.MainActivity;
 import com.react.gabriel.wbam.padoc.connection.ConnectedThread;
 
@@ -30,6 +25,7 @@ public class Messenger {
 
     //Map<UUID, Set<Sources>>
     private Map<String, Set<String>> cbsMsgTracker = new HashMap<String, Set<String>>();
+    private Map<String, Integer> cbsFwds = new HashMap<String, Integer>();
 
     private Set<String> floodMsgTracker = new HashSet<String>();
 
@@ -55,7 +51,9 @@ public class Messenger {
 
         Message.Algo algo = message.getAlgo();
 
-        Message.ContentType contentType;
+        Message.Type contentType = message.getType();
+
+        String sourceAddress = message.getSource();
 
         switch (algo){
 
@@ -65,13 +63,9 @@ public class Messenger {
                 String newAddress = null;
                 String newName = null;
                 String newMesh = null;
-                String sourceAddress;
                 int hops;
 
-                contentType = message.getContentType();
-
                 switch (contentType){
-
 
                     case ID:
                         //This type of messages can come from clients (introducing themselves) or from anyone forwarding an ID message.
@@ -91,18 +85,13 @@ public class Messenger {
                             break;
                         }
 
-//                        newAddressInfo = message.getMsg().split("-");
-//                        newAddress = newAddressInfo[0];
-//                        newName = newAddressInfo[1];
-
-                        sourceAddress = message.getSource();
-
                         hops = message.getHops();
 
                         if(fromThread.isOrphan() && hops == 0 && sourceAddress.equals(newAddress)){
                             //ID msg is original (not a forward)
 
-                            padocManager.connectionFromRemoteClientSucceeded(fromThread, newAddress, newName, newMesh);
+                            fromThread.setRemoteAddress(newAddress);
+                            padocManager.identificationFromRemoteClientSucceeded(fromThread, newAddress, newName, newMesh);
 
                             if(message.getDestination().equals(Message.ALL)){
                                 forwardBroadcastFLOODMsg(message, fromThread.getRemoteAddress());
@@ -110,7 +99,7 @@ public class Messenger {
 
                         }
 
-                        if(!fromThread.isOrphan() && (!mRouter.knows(newAddress) || (mRouter.knows(newAddress) && mRouter.getHopsFor(newAddress) > hops))){
+                        if(!fromThread.isOrphan() && (!mRouter.knows(newAddress) || (mRouter.knows(newAddress) && mRouter.getHopsFor(newAddress) >= hops))){
                             //If we don't have this address registered yet, or if we do but this route is shorter, save it and broadcast.
 
                             //TODO : why not use sourceAddress instead of getRemoteAddress()
@@ -123,6 +112,24 @@ public class Messenger {
 
                         }
 
+                        break;
+
+                    case ID_OFFLINE:
+
+//                        mActivity.debugPrint("offline peer is " + message.getMsg() + " and gate is : " + sourceAddress);
+
+                        String offlineAddress = message.getMsg();
+                        String gatewayAddress = fromThread.getRemoteAddress();
+
+                        if(mRouter.knows(offlineAddress) && mRouter.peerGoesThroughGateway(offlineAddress, gatewayAddress)){
+
+                            mRouter.peerIsNotReachableThroughGateway(offlineAddress, gatewayAddress);
+
+                            if(message.getDestination().equals(Message.ALL)){
+                                forwardBroadcastFLOODMsg(message, fromThread.getRemoteAddress());
+                            }
+
+                        }
 
                         break;
 
@@ -131,8 +138,6 @@ public class Messenger {
 //                        mActivity.debugPrint("Got IDS");
 
                         String newAddresses = message.getMsg();
-
-                        sourceAddress = message.getSource();
 
                         int n = 0;
 
@@ -202,7 +207,7 @@ public class Messenger {
 
                     if(destination.equals(localBluetoothAddress) || destination.equals(Message.ALL)){
                         printMsg(message);
-                        mActivity.debugPrint("From : " + mRouter.getNameFor(fromThread.getRemoteAddress()));
+//                        mActivity.debugPrint("From : " + mRouter.getNameFor(fromThread.getRemoteAddress()));
                     }
 
                 }else{
@@ -223,26 +228,48 @@ public class Messenger {
                 break;
             case ROUTE:
 
-//                System.out.println("It's a ROUTE");
+                switch (contentType){
+                    case ACK_REQUEST:
 
-                destination = message.getDestination();
+//                        mActivity.debugPrint("Got ACK_REQUEST, sending ACK");
+                        fromThread.write(Message.getACKResponseMessage(localBluetoothAddress, sourceAddress));
 
-                if(destination.equals(localBluetoothAddress)){
-                    //Msg has reached its destination, display it.
-                    printMsg(message);
+                        break;
 
-                }else if(mRouter.knows(destination)){
+                    case ACK:
+
+                        if (fromThread.getRemoteAddress().equals(message.getSource())){
+
+                            mRouter.receivedACKFrom(fromThread.getRemoteAddress());
+                        }else {
+                            mActivity.debugPrint("ERROR : source and remoteAddress are not the same in ACK!");
+                        }
+                        break;
+
+                    case MSG:
+
+                        destination = message.getDestination();
+
+                        if(destination.equals(localBluetoothAddress)){
+                            //Msg has reached its destination, display it.
+                            printMsg(message);
+
+                        }else if(mRouter.knows(destination)){
 //                    System.out.println("It knows the destination");
-                    //This is not the final destination of the message, forward it.
-                    forwardMsg(message);
+                            //This is not the final destination of the message, forward it.
+                            forwardMsg(message);
 
-                }else if(destination.equals(Message.ALL)){
-                    mActivity.debugPrint("ERROR : Got malformed message, ROUTE algorithm cannot be used to deliver to ALL");
+                        }else if(destination.equals(Message.ALL)){
+                            mActivity.debugPrint("ERROR : Got malformed message, ROUTE algorithm cannot be used to deliver to ALL");
 
-                }else {
-                    mActivity.debugPrint("ERROR : forward destination unknown");
+                        }else {
+                            mActivity.debugPrint("ERROR : forward destination unknown");
 
+                        }
+
+                        break;
                 }
+
                 break;
         }
     }
@@ -281,9 +308,16 @@ public class Messenger {
     public void forwardCBS(Message message, Set<String> bannedAddresses){
 
         message.incrementHop();
+        String source = message.getSource();
 
         for(Map.Entry<String, ConnectedThread> connectedEntry : mRouter.getConnectedEntries()){
             if(!bannedAddresses.contains(connectedEntry.getKey())){
+
+                if(cbsFwds.containsKey(source)){
+                    cbsFwds.put(source, cbsFwds.get(source)+1);
+                }else {
+                    cbsFwds.put(source, 1);
+                }
                 connectedEntry.getValue().write(message);
             }
         }
@@ -320,7 +354,7 @@ public class Messenger {
 
         if(destination.equals(Message.ALL) && !algo.equals(Message.Algo.ROUTE)){
 
-            message = new Message(algo, Message.ContentType.MSG, msg, localBluetoothAddress, Message.ALL, 0);
+            message = new Message(algo, Message.Type.MSG, msg, localBluetoothAddress, Message.ALL, 0);
 
             switch (algo) {
                 case FLOOD:
@@ -345,7 +379,7 @@ public class Messenger {
 
         }else if(mRouter.knows(destination)){
 
-            message = new Message(algo, Message.ContentType.MSG, msg, localBluetoothAddress, destination, 0);
+            message = new Message(algo, Message.Type.MSG, msg, localBluetoothAddress, destination, 0);
             ConnectedThread routingThread = mRouter.getRoutingThreadFor(destination);
 
 //            System.out.println("Routing thread is " + mRouter.getNameFor(routingThread.getRemoteAddress()));
@@ -359,32 +393,12 @@ public class Messenger {
             mActivity.debugPrint("ERROR : Destination unknown");
         }
 
-//        if(destination.equals(ALL)){
-//
-//            message = new Message(Message.Algo.CBS, Message.ContentType.MSG, msg, localBluetoothAddress, ALL, 0);
-//
-//            for(ConnectedThread connectedThread : mRouter.getConnectedThreads()){
-//                connectedThread.write(message);
-//            }
-//        }else if(mRouter.knows(destination)){
-//
-//            Message message = new Message(Message.Algo.ROUTE, Message.ContentType.MSG, msg, localBluetoothAddress, destination, 0);
-//            mRouter.getRoutingThreadFor(destination).write(message);
-//            mActivity.debugPrint("ME : " + msg);
-//
-//        }else if(destination.equals(localBluetoothAddress)){
-//
-//            mActivity.debugPrint("ERROR : You cannot message yourself");
-//
-//        }else {
-//
-//            mActivity.debugPrint("ERROR : destination unknown");
-//        }
     }
 
     public void introduceMyselfToThread(ConnectedThread connectedThread){
-        mActivity.debugPrint("Sending my ID");
-        Message IDMessage = Message.getIDMsg(localBluetoothAddress, localName, padocManager.getMeshUUID());
+//        mActivity.debugPrint("Sending my ID");
+        //TODO : need to wait for server ID_ACK
+        Message IDMessage = Message.getIDMessage(localBluetoothAddress, localName, padocManager.getMeshUUID());
         connectedThread.write(IDMessage);
     }
 
@@ -392,32 +406,22 @@ public class Messenger {
         String knownPeersString = "";
 
         int n = 0;
-        for(Map.Entry<String, Pair<Integer, String>> knownPeer : mRouter.getKnownPeers()){
-            String knownAddress = knownPeer.getKey();
+        for(String knownAddress : mRouter.getPeers()){
             String knownAddressName = mRouter.getNameFor(knownAddress);
 
             if(!knownAddress.equals(newAddress)){
                 n++;
-                int hops = knownPeer.getValue().first+1;
+                int hops = mRouter.getHopsFor(knownAddress)+1;
                 knownPeersString += knownAddress+"-"+knownAddressName+"<"+hops+">";
             }
         }
 
         if(n > 0){
-            Message knownPeersMessage = new Message(Message.Algo.FLOOD, Message.ContentType.IDS, knownPeersString, localBluetoothAddress, newAddress, 0);
-            mActivity.debugPrint("Sending " + n + " known peers.");
+            Message knownPeersMessage = new Message(Message.Algo.FLOOD, Message.Type.IDS, knownPeersString, localBluetoothAddress, newAddress, 0);
+//            mActivity.debugPrint("Sending " + n + " known peers.");
             mRouter.getRoutingThreadFor(newAddress).write(knownPeersMessage);
         }
 
-//        for(Map.Entry<String, Pair<Integer, String>> knownPeer : mRouter.getKnownPeers()){
-//            String knwonAddress = knownPeer.getKey();
-//            if(!knwonAddress.equals(newAddress)){
-//                mActivity.debugPrint("Sending peer : " + knwonAddress);
-//                int hops = knownPeer.getValue().first+1;
-//                Message message = new Message(Message.Algo.FLOOD, Message.ContentType.ID, knwonAddress, localBluetoothAddress, newAddress, hops);
-//                mRouter.getRoutingThreadFor(newAddress).write(message);
-//            }
-//        }
     }
 
     //EVALUATION
@@ -435,12 +439,13 @@ public class Messenger {
         messageCount.clear();
         floodMsgTracker.clear();
         cbsMsgTracker.clear();
+        cbsFwds.clear();
     }
 
     public void printMessageCount(){
 
         for(String address : messageCount.keySet()){
-            mActivity.debugPrint(mRouter.getNameFor(address) + " : " + messageCount.get(address) + " messages received.");
+            mActivity.debugPrint(mRouter.getNameFor(address) + " : " + messageCount.get(address) + " messages received (" + cbsFwds.get(address) + ") retransmissions");
         }
 
     }
@@ -451,6 +456,6 @@ public class Messenger {
 
         addEvaluationResults(sourceAddress);
 
-        mActivity.debugPrint(mRouter.getNameFor(sourceAddress) + " (" + mRouter.getHopsFor(sourceAddress) + ") (" + message.getHops() + ") : " + message.getMsg());
+//        mActivity.debugPrint(mRouter.getNameFor(sourceAddress) + " (" + mRouter.getHopsFor(sourceAddress) + ") (" + message.getHops() + ") : " + message.getMsg());
     }
 }

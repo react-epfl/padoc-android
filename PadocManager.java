@@ -10,6 +10,8 @@ import android.util.Pair;
 import com.react.gabriel.wbam.MainActivity;
 import com.react.gabriel.wbam.padoc.connection.BluetoothManager;
 import com.react.gabriel.wbam.padoc.connection.ConnectedThread;
+import com.react.gabriel.wbam.padoc.connection.ConnectionsMonitor;
+import com.react.gabriel.wbam.padoc.connection.IncomingConnectionMonitor;
 import com.react.gabriel.wbam.padoc.service.WifiDirectManager;
 
 import java.util.HashSet;
@@ -23,7 +25,7 @@ import java.util.UUID;
 public class PadocManager {
 
     private final UUID PADOC_UUID = UUID.fromString("aa40d6d0-16b0-11e6-bdf4-0800200c9a66");
-    private final int MIN_RECOMMENDED_CONNECTIONS = 2;
+    private final int MIN_RECOMMENDED_CONNECTIONS = 3;
     private final int MAX_RECOMMENDED_CONNECTIONS = 7;
     private String ALL = "ALL";
     private static final String NO_MESH = "-1";
@@ -45,10 +47,10 @@ public class PadocManager {
     private String localName;
     private String meshUUID = NO_MESH;
 
-    private String localBluetoothAddress;
-    private String localWDAddress;
+    private String localAddress;
 
     private Router mRouter;
+    private ConnectionsMonitor connectionsMonitor;
     private Messenger mMessenger;
 
     //Bluetooth
@@ -60,7 +62,7 @@ public class PadocManager {
     private IntentFilter wdIntentFilter;
 
     private ConnectedThread currentOrphanThread;
-    private IncomingConnectionThread incomingConnectionThread;
+    private IncomingConnectionMonitor incomingConnectionMonitor;
 
     //Set containing addresses running PADOC
 //    private Set<String> padocReadyDevices = new HashSet<String>();
@@ -72,7 +74,7 @@ public class PadocManager {
 
         this.mActivity = mActivity;
 
-        Intent intent = new Intent(this.mActivity.getBaseContext(), Monitor.class);
+        Intent intent = new Intent(this.mActivity.getBaseContext(), PadocMonitor.class);
 
 //        intent.putExtra("padocManager", (Parcelable) this);
 
@@ -80,15 +82,17 @@ public class PadocManager {
 
         //Bluetooth
         btManager = new BluetoothManager(mActivity, this);
-        this.localBluetoothAddress = btManager.getLocalBluetoothAddress();
+        this.localAddress = btManager.getLocalBluetoothAddress();
         this.localName = btManager.getLocalName();
 
         //Router
-        this.mRouter = new Router();
+        this.mRouter = new Router(this);
+        this.connectionsMonitor = new ConnectionsMonitor(this, mRouter);
+        this.connectionsMonitor.start();
         btManager.setRouter(mRouter);
 
         //Messenger
-        this.mMessenger = new Messenger(mActivity, this, mRouter, localBluetoothAddress, localName);
+        this.mMessenger = new Messenger(mActivity, this, mRouter, localAddress, localName);
         btManager.setMessenger(mMessenger);
 
         btIntentFilter = new IntentFilter();
@@ -119,6 +123,7 @@ public class PadocManager {
     }
 
     public void onDestroy(){
+        connectionsMonitor.interrupt();
         mActivity.unregisterReceiver(btManager);
         mActivity.unregisterReceiver(wdManager);
     }
@@ -164,17 +169,24 @@ public class PadocManager {
                 break;
             case STATE_RUNNING:
 
-                wdManager.startService(null);
+                if(!wdManager.serviceIsRunning()){
+                    wdManager.startService(null);
+                }else {
+                    wdManager.restartService();
+                }
+
                 this.state = State.STATE_RUNNING;
 
-                if(this.isInMesh() && mRouter.numberOfActiveConnections() >= MIN_RECOMMENDED_CONNECTIONS){
+                if(wdManager.discoveryIsRunning() && this.isInMesh() && mRouter.numberOfActiveConnections() >= MIN_RECOMMENDED_CONNECTIONS){
                     wdManager.stopDiscovery();
+                }else if(!wdManager.discoveryIsRunning() && mRouter.numberOfActiveConnections() < MIN_RECOMMENDED_CONNECTIONS){
+                    wdManager.startDiscovery();;
                 }
 
                 break;
             case STATE_ATTEMPTING_CONNECTION:
 
-                wdManager.stopService();
+                if(wdManager.serviceIsRunning()) wdManager.stopService();
 //                wdManager.stopDiscovery();
                 this.state = State.STATE_ATTEMPTING_CONNECTION;
 
@@ -182,7 +194,7 @@ public class PadocManager {
 
             case STATE_RECEIVING_CONNECTION:
 
-                wdManager.stopService();
+                if(wdManager.serviceIsRunning()) wdManager.stopService();
 //                wdManager.stopDiscovery();
 
                 this.state = State.STATE_RECEIVING_CONNECTION;
@@ -211,8 +223,8 @@ public class PadocManager {
         btManager.unpairDevices();
     }
 
-    public String getLocalBluetoothAddress(){
-        return localBluetoothAddress;
+    public String getLocalAddress(){
+        return localAddress;
     }
 
     public String getLocalName(){
@@ -253,7 +265,7 @@ public class PadocManager {
         //Called when a new Padoc device is discovered through Wifi-Direct
 
         if(!this.isInMesh() && meshUUID.equals(NO_MESH)){
-            mActivity.debugPrint("No one has mesh");
+//            mActivity.debugPrint("No one has mesh");
             //TODO : complete
             //Should be the only available peer, No mesh should be available at this moment.
 
@@ -320,18 +332,28 @@ public class PadocManager {
         }
     }
 
-    public void connectionToServerSucceeded(String meshUUID, String name, String macAddress, ConnectedThread connectedThread){
+    public void connectionToRemoteServerFailed(String mesh, String name, String macAddress){
+        //TODO : Need to add faulty server to list. Make 3 attempts max.
+        mActivity.debugPrint("ERROR : Connection to " + name + " failed.");
+
+        this.setState(State.STATE_RUNNING);
+    }
+
+    public void connectionToRemoteServerSucceeded(String meshUUID, String name, String macAddress, ConnectedThread connectedThread){
+
+        //TODO : Need to wait for ID_ACK from server to actually declare the connection as successful
 
         //If mesh is NO_MESH then we just formed a new mesh and
         //server is waiting for us to send a new meshUUID
         if(meshUUID.equals(NO_MESH)){
+            //TODO : This "random" UUID seems to be the same everytime.
             this.meshUUID = UUID.randomUUID().toString();
             mActivity.debugPrint("New mesh created : " + this.meshUUID + " and sent");
         }else {
             this.meshUUID = meshUUID;
         }
 
-        mRouter.setConnectedDevice(name, macAddress, connectedThread);
+        mRouter.createNewDirectConnection(connectedThread, macAddress, name);
 
         mMessenger.introduceMyselfToThread(connectedThread);
 
@@ -343,15 +365,13 @@ public class PadocManager {
     public void receivedNewConnectionFromRemoteClient(ConnectedThread connectedThread){
         //We are waiting for the client's ID
 
-        //TODO block all other connections temporarily
-
         if(currentOrphanThread == null){
             this.setState(State.STATE_RECEIVING_CONNECTION);
             currentOrphanThread = connectedThread;
-            if(incomingConnectionThread == null){
-                incomingConnectionThread = new IncomingConnectionThread(this, connectedThread);
+            if(incomingConnectionMonitor == null){
+                incomingConnectionMonitor = new IncomingConnectionMonitor(this, connectedThread);
             }else{
-                mActivity.debugPrint("ERROR : incomingConnectionThread should be null if currentOrphanThread is null");
+                mActivity.debugPrint("ERROR : incomingConnectionMonitor should be null if currentOrphanThread is null");
             }
 
         }else {
@@ -360,30 +380,34 @@ public class PadocManager {
 
     }
 
-    public void connectionFromRemoteClientTimedOut(ConnectedThread connectedThread){
-        if(currentOrphanThread != null && currentOrphanThread.equals(connectedThread) && incomingConnectionThread != null){
+    public void identificationFromRemoteClientTimedOut(ConnectedThread connectedThread){
+        if(currentOrphanThread != null && currentOrphanThread.equals(connectedThread) && incomingConnectionMonitor != null){
+
+            //TODO : Client is supposedly connected but it hasn't identified.
+            //Should send ID request.
 
             currentOrphanThread = null;
-            incomingConnectionThread.interrupt();
-            incomingConnectionThread = null;
+            incomingConnectionMonitor.interrupt();
+            incomingConnectionMonitor = null;
             this.setState(State.STATE_RUNNING);
+
         }else {
             mActivity.debugPrint("ERRPR : Something bad happened.");
         }
     }
 
-    public void connectionFromRemoteClientSucceeded(ConnectedThread connectedThread, String newAddress, String newName, String newMesh){
+    public void identificationFromRemoteClientSucceeded(ConnectedThread connectedThread, String newAddress, String newName, String newMesh){
 
         if(currentOrphanThread != null && currentOrphanThread.equals(connectedThread)){
 
 
-            mRouter.createNewEntry(connectedThread, newAddress, newName);
+            mRouter.createNewDirectConnection(connectedThread, newAddress, newName);
             currentOrphanThread = null;
 
-            if(incomingConnectionThread != null){
-                incomingConnectionThread = null;
+            if(incomingConnectionMonitor != null){
+                incomingConnectionMonitor = null;
             }else{
-                mActivity.debugPrint("ERROR : incomingConnectionThread should also be null");
+                mActivity.debugPrint("ERROR : incomingConnectionMonitor should also be null");
             }
 
             mActivity.debugPrint("Identified peer to : " + newName);
@@ -416,13 +440,6 @@ public class PadocManager {
 
     }
 
-    public void connectionFromLocalClientFailed(String mesh, String name, String macAddress){
-        //TODO : Need to add faulty server to list. Make 3 attempts max.
-        mActivity.debugPrint("ERROR : Connection to " + name + " (" + mesh + ") failed.");
-
-        this.setState(State.STATE_RUNNING);
-    }
-
     public String[] getPeers(){
 
         Set<String> peers = mRouter.getPeers();
@@ -434,7 +451,7 @@ public class PadocManager {
 
     public Set<Map.Entry<String, String>> getPeerNames(){
 
-        return mRouter.getPeerNamesAndHops();
+        return mRouter.getPeerNames();
     }
 
     public int getHopsFor(String address){
@@ -446,9 +463,15 @@ public class PadocManager {
         mMessenger.sendMsg(msg, address, Message.Algo.ROUTE);
     }
 
+    public void lostConnectionToPeer(String offlineAddress){
+        this.setState(State.STATE_RUNNING);
+        //Peer may still be online but the connection through this node is compromised.
+        mMessenger.broadcastMsg(Message.getIDOfflineMessage(localAddress, offlineAddress));
+    }
+
     //Debug functions
     public void debugPrint(String msg){
-//        if (DBG) System.out.println(msg);
+        if (DBG) System.out.println(msg);
         mActivity.debugPrint(msg);
     }
 
@@ -479,6 +502,16 @@ public class PadocManager {
 
     public void clearMessageCount(){
         mMessenger.clearMessageCount();
+    }
+
+    public void lostConnectionToMesh(){
+
+        this.meshUUID = NO_MESH;
+
+        debugPrint("Lost Mesh");
+
+        this.setState(State.STATE_RUNNING);
+        //TODO I feel like I'm missing something here...
     }
 
 }

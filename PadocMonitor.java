@@ -1,6 +1,7 @@
 package com.react.gabriel.wbam.padoc;
 
 import android.app.Service;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.net.wifi.WifiManager;
@@ -10,7 +11,7 @@ import android.os.IBinder;
 /**
  * Created by gabriel on 03/06/16.
  */
-public class Monitor extends Service {
+public class PadocMonitor extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -43,6 +44,8 @@ public class Monitor extends Service {
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         wifiManager.setWifiEnabled(false);
 
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        bluetoothAdapter.disable();
 
         stopSelf();
     }
