@@ -1,5 +1,7 @@
 package com.react.gabriel.wbam.padoc;
 
+import com.react.gabriel.wbam.R;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -27,6 +29,9 @@ public class Message {
     private static final String CONTENT_MSG = "content-msg";
     private static final String CONTENT_PRIORITY = "content-priority";
     private static final String CONTENT_ACK_REQUEST = "content-ack-request";
+    private static final String CONTENT_FLOOD_TEST_REQUEST = "content-flood-test-request";
+    private static final String CONTENT_CBS_TEST_REQUEST = "content-cbs-test-request";
+    private static final String CONTENT_ROUTE_TEST_REQUEST = "content-route-test-request";
     private static final String CONTENT_ACK = "content-ack";
 
     //Content fields
@@ -42,11 +47,10 @@ public class Message {
     //Number of hops. This is the only field that changes with every forward.
     private static final String HOPS = "hops";
 
-
     //TODO : maybe every JSON field should be declared as an Objet field, some finals, like the ID.
 
     public enum Type {
-        ACK_REQUEST, ACK, ID, ID_OFFLINE, IDS, MSG, PRIORITY;
+        ROUTE_TEST_REQUEST, CBS_TEST_REQUEST, FLOOD_TEST_REQUEST, ACK_REQUEST, ACK, ID, ID_OFFLINE, IDS, MSG, PRIORITY;
     }
 
     public enum Algo {
@@ -94,6 +98,12 @@ public class Message {
                     break;
                 case ACK_REQUEST:
                     jsonMsg.put(CONTENT, CONTENT_ACK_REQUEST);
+                    break;
+                case FLOOD_TEST_REQUEST:
+                    jsonMsg.put(CONTENT, CONTENT_FLOOD_TEST_REQUEST);
+                    break;
+                case CBS_TEST_REQUEST:
+                    jsonMsg.put(CONTENT, CONTENT_CBS_TEST_REQUEST);
                     break;
                 case ACK:
                     jsonMsg.put(CONTENT, CONTENT_ACK);
@@ -153,9 +163,14 @@ public class Message {
         return new Message(Algo.ROUTE, Type.ACK_REQUEST, null, localAddress, destination, 0);
     }
 
-    public static Message getACKResponseMessage(String localAddres, String destination){
+    public static Message getTestRequest(Type type, String localAddress){
 
-        return new Message(Algo.ROUTE, Type.ACK, null, localAddres, destination, 0);
+        return new Message(Algo.FLOOD, type, null, localAddress, ALL, 0);
+    }
+
+    public static Message getACKMessage(String localAddress, String destination){
+
+        return new Message(Algo.ROUTE, Type.ACK, null, localAddress, destination, 0);
     }
 
     public Type getType(){
@@ -179,6 +194,10 @@ public class Message {
                 return Type.MSG;
             case CONTENT_ACK_REQUEST:
                 return Type.ACK_REQUEST;
+            case CONTENT_CBS_TEST_REQUEST:
+                return Type.CBS_TEST_REQUEST;
+            case CONTENT_ROUTE_TEST_REQUEST:
+                return Type.ROUTE_TEST_REQUEST;
             case CONTENT_ACK:
                 return Type.ACK;
             default: return null;

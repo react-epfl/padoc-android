@@ -8,9 +8,11 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.util.Pair;
 
 import com.react.gabriel.wbam.MainActivity;
+import com.react.gabriel.wbam.padoc.connection.ACKMonitor;
+import com.react.gabriel.wbam.padoc.connection.ACKPusher;
 import com.react.gabriel.wbam.padoc.connection.BluetoothManager;
 import com.react.gabriel.wbam.padoc.connection.ConnectedThread;
-import com.react.gabriel.wbam.padoc.connection.ConnectionsMonitor;
+//import com.react.gabriel.wbam.padoc.connection.ACKRequestMonitor;
 import com.react.gabriel.wbam.padoc.connection.IncomingConnectionMonitor;
 import com.react.gabriel.wbam.padoc.service.WifiDirectManager;
 
@@ -25,7 +27,7 @@ import java.util.UUID;
 public class PadocManager {
 
     private final UUID PADOC_UUID = UUID.fromString("aa40d6d0-16b0-11e6-bdf4-0800200c9a66");
-    private final int MIN_RECOMMENDED_CONNECTIONS = 3;
+    private final int MIN_RECOMMENDED_CONNECTIONS = 2;
     private final int MAX_RECOMMENDED_CONNECTIONS = 7;
     private String ALL = "ALL";
     private static final String NO_MESH = "-1";
@@ -50,7 +52,11 @@ public class PadocManager {
     private String localAddress;
 
     private Router mRouter;
-    private ConnectionsMonitor connectionsMonitor;
+
+//    private ACKRequestMonitor ACKRequestMonitor;
+    private ACKPusher ackPusher;
+    private ACKMonitor ackMonitor;
+
     private Messenger mMessenger;
 
     //Bluetooth
@@ -87,13 +93,22 @@ public class PadocManager {
 
         //Router
         this.mRouter = new Router(this);
-        this.connectionsMonitor = new ConnectionsMonitor(this, mRouter);
-        this.connectionsMonitor.start();
+
+
         btManager.setRouter(mRouter);
 
         //Messenger
         this.mMessenger = new Messenger(mActivity, this, mRouter, localAddress, localName);
         btManager.setMessenger(mMessenger);
+
+
+//        this.ACKRequestMonitor = new ACKRequestMonitor(this, mRouter);
+//        this.ACKRequestMonitor.start();
+
+        this.ackPusher = new ACKPusher(this, mMessenger);
+        ackPusher.start();
+        this.ackMonitor = new ACKMonitor(this, mRouter);
+        ackMonitor.start();
 
         btIntentFilter = new IntentFilter();
         //Bluetooth state changes
@@ -123,7 +138,9 @@ public class PadocManager {
     }
 
     public void onDestroy(){
-        connectionsMonitor.interrupt();
+//        ACKRequestMonitor.interrupt();
+        ackPusher.interrupt();
+        ackMonitor.interrupt();
         mActivity.unregisterReceiver(btManager);
         mActivity.unregisterReceiver(wdManager);
     }
@@ -481,13 +498,17 @@ public class PadocManager {
         mMessenger.sendMsg("Hallo CBS from " + localName, ALL, Message.Algo.CBS);
     }
 
+    public void requestTest(Message.Type type, Integer interval){
+        mMessenger.requestTest(type, interval);
+    }
+
     public void sendFLOOD(){
         mMessenger.sendMsg("Test FLOOD from " + localName, ALL, Message.Algo.FLOOD);
     }
 
-    public void sendMsgToBlack04(){
+    public void sendROUTE(String destination){
         String msg = "Hello World";
-        mMessenger.sendMsg(msg, "B4:74:43:45:EB:78", Message.Algo.ROUTE);
+        mMessenger.sendMsg(msg, destination, Message.Algo.ROUTE);
     }
 
     //Getters

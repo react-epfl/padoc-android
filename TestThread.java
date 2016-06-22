@@ -19,43 +19,60 @@ public class TestThread {
     private final int TOTAL_TIME = 602000;
 
 
-    private MainActivity mActivity;
+    private PadocManager padocManager;
 
-    public TestThread(MainActivity mActivity){
+    public TestThread(PadocManager padocManager){
 
-        this.mActivity = mActivity;
+        this.padocManager = padocManager;
 
     }
 
-    public void startTest(final Message.Algo algo){
+    public void startTest(final Message.Algo algo, Integer interval, final String destination){
 
-        new CountDownTimer(TOTAL_TIME, TICK_TIME) {
+        switch (algo){
+            case FLOOD:
 
-            public void onTick(long millisUntilFinished) {
+                new CountDownTimer(TOTAL_TIME, interval) {
 
-                switch (algo){
-                    case FLOOD:
+                    public void onTick(long millisUntilFinished) {
+                        padocManager.sendFLOOD();
+                    }
 
-                        mActivity.sendFLOOD(null);
+                    public void onFinish() {
+                        padocManager.debugPrint("FLOOD TEST DONE");
+                    }
+                }.start();
 
-                        break;
-                    case CBS:
+                break;
+            case CBS:
 
-                        mActivity.sendCBS(null);
+                new CountDownTimer(TOTAL_TIME, interval) {
 
-                        break;
-                    case ROUTE:
+                    public void onTick(long millisUntilFinished) {
+                        padocManager.sendCBS();
+                    }
 
-                        mActivity.msgBlack04(null);
+                    public void onFinish() {
+                        padocManager.debugPrint("CBS TEST DONE");
+                    }
+                }.start();
 
-                        break;
-                }
-            }
+                break;
+            case ROUTE:
 
-            public void onFinish() {
-                mActivity.debugPrint("TEST DONE");
-            }
-        }.start();
+                new CountDownTimer(TOTAL_TIME, interval) {
+
+                    public void onTick(long millisUntilFinished) {
+                        padocManager.sendROUTE(destination);
+                    }
+
+                    public void onFinish() {
+                        padocManager.debugPrint("ROUTE TEST DONE");
+                    }
+                }.start();
+
+                break;
+        }
     }
 
 }

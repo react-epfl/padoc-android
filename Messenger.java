@@ -53,7 +53,9 @@ public class Messenger {
 
         Message.Type contentType = message.getType();
 
-        String sourceAddress = message.getSource();
+        final String sourceAddress = message.getSource();
+
+        final String content = message.getMsg();
 
         switch (algo){
 
@@ -72,7 +74,7 @@ public class Messenger {
 //                        mActivity.debugPrint("Got ID");
 
                         try{
-                            JSONObject jsonMessage = new JSONObject(message.getMsg());
+                            JSONObject jsonMessage = new JSONObject(content);
                             newAddress = jsonMessage.getString(Message.ADDRESS);
                             newName = jsonMessage.getString(Message.NAME);
                             newMesh = jsonMessage.getString(Message.MESH);
@@ -118,7 +120,7 @@ public class Messenger {
 
 //                        mActivity.debugPrint("offline peer is " + message.getMsg() + " and gate is : " + sourceAddress);
 
-                        String offlineAddress = message.getMsg();
+                        String offlineAddress = content;
                         String gatewayAddress = fromThread.getRemoteAddress();
 
                         if(mRouter.knows(offlineAddress) && mRouter.peerGoesThroughGateway(offlineAddress, gatewayAddress)){
@@ -137,7 +139,7 @@ public class Messenger {
                         //This type of messages only come from servers.
 //                        mActivity.debugPrint("Got IDS");
 
-                        String newAddresses = message.getMsg();
+                        String newAddresses = content;
 
                         int n = 0;
 
@@ -186,6 +188,39 @@ public class Messenger {
                         }
 
                         break;
+                    case FLOOD_TEST_REQUEST:
+
+                        mActivity.runOnUiThread(new Runnable() {
+                            public void run() {
+                                TestThread testThread = new TestThread(padocManager);
+                                padocManager.debugPrint("STARTING FLOOD at interval : " + content);
+                                testThread.startTest(Message.Algo.FLOOD, Integer.valueOf(content), null);
+                            }
+                        });
+
+                        break;
+                    case CBS_TEST_REQUEST:
+
+                        mActivity.runOnUiThread(new Runnable() {
+                            public void run() {
+                                TestThread testThread = new TestThread(padocManager);
+                                padocManager.debugPrint("STARTING CBS at interval : " + content);
+                                testThread.startTest(Message.Algo.CBS, Integer.valueOf(content), null);
+                            }
+                        });
+
+                        break;
+                    case ROUTE_TEST_REQUEST:
+
+                        mActivity.runOnUiThread(new Runnable() {
+                            public void run() {
+                                TestThread testThread = new TestThread(padocManager);
+                                padocManager.debugPrint("STARTING ROUTE at interval : " + content);
+                                testThread.startTest(Message.Algo.ROUTE, Integer.valueOf(content), sourceAddress);
+                            }
+                        });
+
+                        break;
                 }
                 break;
 
@@ -232,7 +267,7 @@ public class Messenger {
                     case ACK_REQUEST:
 
 //                        mActivity.debugPrint("Got ACK_REQUEST, sending ACK");
-                        fromThread.write(Message.getACKResponseMessage(localBluetoothAddress, sourceAddress));
+                        fromThread.write(Message.getACKMessage(localBluetoothAddress, sourceAddress));
 
                         break;
 
@@ -449,6 +484,25 @@ public class Messenger {
         }
 
     }
+
+    public void requestTest(Message.Type type, Integer interval){
+
+        Message m = new Message(Message.Algo.FLOOD, type, interval.toString(), localBluetoothAddress, Message.ALL, 0);
+
+        for(ConnectedThread connectedThread : mRouter.getConnectedThreads()){
+            connectedThread.write(m);
+        }
+    }
+
+    public void pushACKs(){
+
+        for(ConnectedThread connectedThread : mRouter.getConnectedThreads()){
+            connectedThread.write(Message.getACKMessage(padocManager.getLocalAddress(), connectedThread.getRemoteAddress()));
+        }
+
+    }
+
+    //////////
 
     private void printMsg(Message message){
 

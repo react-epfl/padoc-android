@@ -6,7 +6,7 @@ import com.react.gabriel.wbam.padoc.Router;
 /**
  * Created by gabriel on 16/06/16.
  */
-public class ConnectionsMonitor extends Thread {
+public class ACKRequestMonitor extends Thread {
 
     // triangle configuration
     private static final int TICK_TIME = 40000; //Must be > than TIMEOUT
@@ -16,7 +16,7 @@ public class ConnectionsMonitor extends Thread {
     private PadocManager padocManager;
     private Router mRouter;
 
-    public ConnectionsMonitor(PadocManager padocManager, Router router){
+    public ACKRequestMonitor(PadocManager padocManager, Router router){
 
         this.padocManager = padocManager;
         this.mRouter = router;
@@ -46,7 +46,7 @@ public class ConnectionsMonitor extends Thread {
                     e.printStackTrace();
                 }
 
-                mRouter.cleanUpDirectConnections();
+//                mRouter.cleanUpDirectConnections();
 
             }
         }
