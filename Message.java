@@ -105,6 +105,9 @@ public class Message {
                 case CBS_TEST_REQUEST:
                     jsonMsg.put(CONTENT, CONTENT_CBS_TEST_REQUEST);
                     break;
+                case ROUTE_TEST_REQUEST:
+                    jsonMsg.put(CONTENT, CONTENT_ROUTE_TEST_REQUEST);
+                    break;
                 case ACK:
                     jsonMsg.put(CONTENT, CONTENT_ACK);
             }
@@ -150,7 +153,11 @@ public class Message {
             e.printStackTrace();
         }
 
-        return new Message(Algo.FLOOD, Type.ID, jsonMessageContent.toString(), localAddress, ALL, 0);
+        Message idMsg = new Message(Algo.FLOOD, Type.ID, jsonMessageContent.toString(), localAddress, ALL, 0);
+
+        System.out.print("ID message is " + idMsg.toString().getBytes().length + " bytes");
+
+        return idMsg;
     }
 
     public static Message getIDOfflineMessage(String localAddress, String offlineAddress){
@@ -194,6 +201,8 @@ public class Message {
                 return Type.MSG;
             case CONTENT_ACK_REQUEST:
                 return Type.ACK_REQUEST;
+            case CONTENT_FLOOD_TEST_REQUEST:
+                return Type.FLOOD_TEST_REQUEST;
             case CONTENT_CBS_TEST_REQUEST:
                 return Type.CBS_TEST_REQUEST;
             case CONTENT_ROUTE_TEST_REQUEST:

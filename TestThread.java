@@ -15,8 +15,8 @@ public class TestThread {
 //    private final int TOTAL_TIME = 602000;
 
     //120 messages per minute for 10 minutes
-    private final int TICK_TIME = 2000;
-    private final int TOTAL_TIME = 602000;
+//    private final int TICK_TIME = 2000;
+    private final int TOTAL_TIME = 600000;
 
 
     private PadocManager padocManager;
@@ -32,7 +32,7 @@ public class TestThread {
         switch (algo){
             case FLOOD:
 
-                new CountDownTimer(TOTAL_TIME, interval) {
+                new CountDownTimer(TOTAL_TIME + interval, interval) {
 
                     public void onTick(long millisUntilFinished) {
                         padocManager.sendFLOOD();
@@ -46,7 +46,7 @@ public class TestThread {
                 break;
             case CBS:
 
-                new CountDownTimer(TOTAL_TIME, interval) {
+                new CountDownTimer(TOTAL_TIME + interval, interval) {
 
                     public void onTick(long millisUntilFinished) {
                         padocManager.sendCBS();
@@ -60,7 +60,7 @@ public class TestThread {
                 break;
             case ROUTE:
 
-                new CountDownTimer(TOTAL_TIME, interval) {
+                new CountDownTimer(TOTAL_TIME + interval, interval) {
 
                     public void onTick(long millisUntilFinished) {
                         padocManager.sendROUTE(destination);

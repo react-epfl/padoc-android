@@ -27,8 +27,8 @@ import java.util.UUID;
 public class PadocManager {
 
     private final UUID PADOC_UUID = UUID.fromString("aa40d6d0-16b0-11e6-bdf4-0800200c9a66");
-    private final int MIN_RECOMMENDED_CONNECTIONS = 2;
-    private final int MAX_RECOMMENDED_CONNECTIONS = 7;
+    private final int MIN_RECOMMENDED_CONNECTIONS = 1;
+    private final int MAX_RECOMMENDED_CONNECTIONS = 3;
     private String ALL = "ALL";
     private static final String NO_MESH = "-1";
 
@@ -186,13 +186,16 @@ public class PadocManager {
                 break;
             case STATE_RUNNING:
 
-                if(!wdManager.serviceIsRunning()){
-                    wdManager.startService(null);
-                }else {
-                    wdManager.restartService();
-                }
-
                 this.state = State.STATE_RUNNING;
+
+                if(wdManager.serviceIsRunning() && mRouter.numberOfActiveConnections() >= MAX_RECOMMENDED_CONNECTIONS){
+
+                    wdManager.stopService();
+                }else if(wdManager.serviceIsRunning() && mRouter.numberOfActiveConnections() < MAX_RECOMMENDED_CONNECTIONS){
+                    wdManager.restartService();
+                }else if(!wdManager.serviceIsRunning() && mRouter.numberOfActiveConnections() < MAX_RECOMMENDED_CONNECTIONS){
+                    wdManager.startService(null);
+                }
 
                 if(wdManager.discoveryIsRunning() && this.isInMesh() && mRouter.numberOfActiveConnections() >= MIN_RECOMMENDED_CONNECTIONS){
                     wdManager.stopDiscovery();

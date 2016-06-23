@@ -52,7 +52,7 @@ public class WifiDirectService {
                     @Override
                     public void onSuccess() {
                         serviceIsRunning = true;
-//                        mActivity.debugPrint("PADOC service added successfully");
+                        mActivity.debugPrint("PADOC service added successfully");
                     }
                     @Override
                     public void onFailure(int reasonCode) {
@@ -78,7 +78,7 @@ public class WifiDirectService {
                 mManager.clearLocalServices(mChannel, new WifiP2pManager.ActionListener() {
                     public void onSuccess() {
                         serviceIsRunning = false;
-//                        mActivity.debugPrint("PADOC service is OFF");
+                        mActivity.debugPrint("PADOC service is OFF");
                     }
 
                     public void onFailure(int reason) {

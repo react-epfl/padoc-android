@@ -15,7 +15,7 @@ import java.util.Set;
 public class Router {
 
     public final int ADDRESS_UNKNOWN = -1;
-    public final int MAX_MISSED_ACKS = 2;
+    public final int MAX_MISSED_ACKS = 3;
 
     private PadocManager padocManager;
 

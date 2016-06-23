@@ -55,7 +55,7 @@ public class Messenger {
 
         final String sourceAddress = message.getSource();
 
-        final String content = message.getMsg();
+//        final String content = message.getMsg();
 
         switch (algo){
 
@@ -74,7 +74,7 @@ public class Messenger {
 //                        mActivity.debugPrint("Got ID");
 
                         try{
-                            JSONObject jsonMessage = new JSONObject(content);
+                            JSONObject jsonMessage = new JSONObject(message.getMsg());
                             newAddress = jsonMessage.getString(Message.ADDRESS);
                             newName = jsonMessage.getString(Message.NAME);
                             newMesh = jsonMessage.getString(Message.MESH);
@@ -120,7 +120,7 @@ public class Messenger {
 
 //                        mActivity.debugPrint("offline peer is " + message.getMsg() + " and gate is : " + sourceAddress);
 
-                        String offlineAddress = content;
+                        String offlineAddress = message.getMsg();
                         String gatewayAddress = fromThread.getRemoteAddress();
 
                         if(mRouter.knows(offlineAddress) && mRouter.peerGoesThroughGateway(offlineAddress, gatewayAddress)){
@@ -139,7 +139,7 @@ public class Messenger {
                         //This type of messages only come from servers.
 //                        mActivity.debugPrint("Got IDS");
 
-                        String newAddresses = content;
+                        String newAddresses = message.getMsg();
 
                         int n = 0;
 
@@ -190,35 +190,47 @@ public class Messenger {
                         break;
                     case FLOOD_TEST_REQUEST:
 
+                        final String floodRequestInterval = message.getMsg();
+
                         mActivity.runOnUiThread(new Runnable() {
                             public void run() {
                                 TestThread testThread = new TestThread(padocManager);
-                                padocManager.debugPrint("STARTING FLOOD at interval : " + content);
-                                testThread.startTest(Message.Algo.FLOOD, Integer.valueOf(content), null);
+                                padocManager.debugPrint("STARTING FLOOD at interval : " + floodRequestInterval);
+                                testThread.startTest(Message.Algo.FLOOD, Integer.valueOf(floodRequestInterval), null);
                             }
                         });
+
+                        forwardBroadcastFLOODMsg(message, fromThread.getRemoteAddress());
 
                         break;
                     case CBS_TEST_REQUEST:
 
+                        final String cbsRequestInterval = message.getMsg();
+
                         mActivity.runOnUiThread(new Runnable() {
                             public void run() {
                                 TestThread testThread = new TestThread(padocManager);
-                                padocManager.debugPrint("STARTING CBS at interval : " + content);
-                                testThread.startTest(Message.Algo.CBS, Integer.valueOf(content), null);
+                                padocManager.debugPrint("STARTING CBS at interval : " + cbsRequestInterval);
+                                testThread.startTest(Message.Algo.CBS, Integer.valueOf(cbsRequestInterval), null);
                             }
                         });
+
+                        forwardBroadcastFLOODMsg(message, fromThread.getRemoteAddress());
 
                         break;
                     case ROUTE_TEST_REQUEST:
 
+                        final String routeRequestInterval = message.getMsg();
+
                         mActivity.runOnUiThread(new Runnable() {
                             public void run() {
                                 TestThread testThread = new TestThread(padocManager);
-                                padocManager.debugPrint("STARTING ROUTE at interval : " + content);
-                                testThread.startTest(Message.Algo.ROUTE, Integer.valueOf(content), sourceAddress);
+                                padocManager.debugPrint("STARTING ROUTE at interval : " + routeRequestInterval);
+                                testThread.startTest(Message.Algo.ROUTE, Integer.valueOf(routeRequestInterval), sourceAddress);
                             }
                         });
+
+                        forwardBroadcastFLOODMsg(message, fromThread.getRemoteAddress());
 
                         break;
                 }
@@ -421,7 +433,7 @@ public class Messenger {
 
             routingThread.write(message);
 
-            mActivity.debugPrint("ME : " + msg);
+//            mActivity.debugPrint("ME : " + msg);
         }else if(destination.equals(localBluetoothAddress)){
             mActivity.debugPrint("You cannot message yourself");
         }else {
@@ -488,6 +500,8 @@ public class Messenger {
     public void requestTest(Message.Type type, Integer interval){
 
         Message m = new Message(Message.Algo.FLOOD, type, interval.toString(), localBluetoothAddress, Message.ALL, 0);
+
+        floodMsgTracker.add(m.getUUID());
 
         for(ConnectedThread connectedThread : mRouter.getConnectedThreads()){
             connectedThread.write(m);
