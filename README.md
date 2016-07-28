@@ -2,7 +2,7 @@
 
 Automatic peer-to-peer multihop library for Android
 
-To use in your project don't forget to add the following to the manifest file :
+To use in your project add the following to the manifest file :
 
 
 <manifest ...>
