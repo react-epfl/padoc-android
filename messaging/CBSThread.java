@@ -1,4 +1,6 @@
-package com.react.gabriel.wbam.padoc;
+package com.react.gabriel.wbam.padoc.messaging;
+
+import com.react.gabriel.wbam.padoc.Padoc;
 
 /**
  * Created by gabriel on 24/05/16.
@@ -15,12 +17,14 @@ public class CBSThread extends Thread {
     private int nMax = 2;
     private int rad;
 
-    private Messenger mMessenger;
+    private Padoc padoc;
+    private MessageManager mMessenger;
     private final Message message;
 
-    public CBSThread(Messenger mMessenger, Message message){
+    public CBSThread(Padoc padoc, MessageManager messenger, Message message){
 
-        this.mMessenger = mMessenger;
+        this.padoc = padoc;
+        this.mMessenger = messenger;
         this.message = message;
         this.rad = (int)(Math.random() * CBS_MAX_RAD);
 
@@ -38,14 +42,31 @@ public class CBSThread extends Thread {
             e.printStackTrace();
         }
 
-        //How many duplicates?
-        int n = mMessenger.getCBSCountForMsg(uuid);
+        if(this.padoc.isParent()){
 
-//        System.out.println("Count is n = " + n);
+            //How many bluetooth sources?
+            int numberOfBluetoothSources = mMessenger.getCBSSourceCountFor(uuid);
 
-        if(n<nMax) {
-            mMessenger.forwardCBS(message, mMessenger.getCBSBannedListForMsg(uuid));
+//            this.padoc.print("Count of bluetoothSources is = " + numberOfBluetoothSources);
+
+            if(numberOfBluetoothSources < nMax) {
+//                this.padoc.print("forwarding to siblings");
+                mMessenger.forwardCBSToSiblings(message, mMessenger.getCBSBannedListFor(uuid));
+            }
         }
+
+        int numberOfMulticasts = mMessenger.getCBSMulticastCountFor(uuid);
+
+//        this.padoc.print("Count of multicasts is = " + numberOfMulticasts);
+
+        if(numberOfMulticasts < nMax){
+//            this.padoc.print("multicasting");
+
+            //Multicast message
+            this.mMessenger.forwardMulticast(message);
+        }
+
+
 
         //TODO
 //        try{

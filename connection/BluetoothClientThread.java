@@ -4,32 +4,31 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 
+import com.react.gabriel.wbam.padoc.Padoc;
+
 import java.io.IOException;
 
 /**
  * Created by gabriel on 18/05/16.
  */
-public class ClientThread extends Thread {
+public class BluetoothClientThread extends Thread {
 
-    private final BluetoothManager btManager;
+    private final Padoc padoc;
     private final BluetoothSocket mmSocket;
-    private final String serverMesh;
     private final String serverAddress;
-    private final String serverName;
 
-    public ClientThread(BluetoothManager btManager, String meshUUID, BluetoothDevice device, String name) {
+    public BluetoothClientThread(Padoc padoc, BluetoothDevice device) {
 
-        this.btManager = btManager;
-        this.serverMesh = meshUUID;
+        this.padoc = padoc;
         this.serverAddress = device.getAddress();
-        this.serverName = name;
         // Use a temporary object that is later assigned to mmSocket because mmSocket is final
         BluetoothSocket tmp = null;
 
         // Get a BluetoothSocket to connect with the given BluetoothDevice
         try {
             // MY_UUID is the app's UUID string, also used by the server code
-            tmp = device.createRfcommSocketToServiceRecord(btManager.getPadocUUID());
+            //TODO
+            tmp = device.createRfcommSocketToServiceRecord(padoc.getPadocUUID());
         } catch (IOException e) { }
         mmSocket = tmp;
     }
@@ -47,13 +46,12 @@ public class ClientThread extends Thread {
             if(!mmSocket.isConnected()){
                 try {
                     mmSocket.close();
-                    btManager.connectionToRemoteServerFailed(serverMesh, serverName, serverAddress);
+                    padoc.onBluetoothConnectionFailed();
+//                    btManager.connectionToRemoteServerFailed(serverAddress);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-
             }
-
         }
     };
 
@@ -77,9 +75,13 @@ public class ClientThread extends Thread {
 
         // Do work to manage the connection (in a separate thread)
         if(mmSocket.isConnected()){
-            btManager.manageConnectedSocket(serverMesh, serverName, mmSocket, serverAddress);
+            //TODO
+            padoc.handleBluetoothConnectedSocket(mmSocket);
+//            btManager.manageConnectedSocket(serverMesh, serverName, mmSocket, serverAddress);
         }else {
-            btManager.connectionToRemoteServerFailed(serverMesh, serverName, serverAddress);
+            //TODO
+            padoc.onBluetoothConnectionFailed();
+//            btManager.connectionToRemoteServerFailed(serverMesh, serverName, serverAddress);
         }
     }
 

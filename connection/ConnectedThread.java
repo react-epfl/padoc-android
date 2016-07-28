@@ -1,98 +1,22 @@
 package com.react.gabriel.wbam.padoc.connection;
 
-import android.bluetooth.BluetoothSocket;
-
-import com.react.gabriel.wbam.MainActivity;
-import com.react.gabriel.wbam.padoc.Message;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import com.react.gabriel.wbam.padoc.messaging.Message;
 
 /**
- * Created by gabriel on 18/05/16.
+ * Created by gabriel on 05/07/16.
  */
-public class ConnectedThread extends Thread {
+public interface ConnectedThread {
 
-    private BluetoothManager btManager = null;
-    private final BluetoothSocket mmSocket;
-    private final InputStream mmInStream;
-    private final OutputStream mmOutStream;
-    private String remoteAddress;
+    void start();
 
-    private MainActivity mActivity;
+    void setRemoteAddress(String remoteAddress);
 
-    public ConnectedThread(MainActivity mainActivity, BluetoothManager btManager, BluetoothSocket socket, String remoteAddress) {
+    void setRemoteName(String remoteName);
 
-        this.mActivity = mainActivity;
-        this.btManager = btManager;
-        this.mmSocket = socket;
-        this.remoteAddress = remoteAddress;
-        InputStream tmpIn = null;
-        OutputStream tmpOut = null;
+    String getRemoteAddress();
 
-        // Get the input and output streams, using temp objects because
-        // member streams are final
-        try {
-            tmpIn = mmSocket.getInputStream();
-            tmpOut = mmSocket.getOutputStream();
-        } catch (IOException e) { }
+    String getRemoteName();
 
-        mmInStream = tmpIn;
-        mmOutStream = tmpOut;
-    }
+    void write(Message message);
 
-    public void run() {
-        byte[] buffer = new byte[512];  // buffer store for the stream
-        int bytes; // bytes returned from read()
-
-        // Keep listening to the InputStream until an exception occurs
-        while (true) {
-            try {
-                // Read from the InputStream
-
-                //Without Handler
-                bytes = mmInStream.read(buffer);
-                String jsonString = new String(buffer, 0, bytes);
-//                mActivity.debugPrint("Socket is conn? : " + mmSocket.isConnected());
-//                mActivity.debugPrint("BUFF : " + jsonString);
-                Message message = new Message();
-                if(message.setMessage(jsonString))  btManager.deliverMsg(message, this);
-
-
-            } catch (IOException e) {
-                break;
-            }
-        }
-    }
-
-    /* Call this from the main activity to send data to the remote device */
-    public void write(Message message) {
-        try {
-            System.out.println("Sending " + message.toString().getBytes().length + " bytes");
-            byte[] bytes = message.toString().getBytes();
-//            mActivity.debugPrint("Sending out : " + message.toString());
-//            mActivity.debugPrint("Socket is connected ? " + mmSocket.isConnected());
-            mmOutStream.write(bytes);
-        } catch (IOException e) { }
-    }
-
-    /* Call this from the main activity to shutdown the connection */
-    public void cancel() {
-        try {
-            mmSocket.close();
-        } catch (IOException e) { }
-    }
-
-    public String getRemoteAddress(){
-        return remoteAddress;
-    }
-
-    public void setRemoteAddress(String remoteAddress){
-        this.remoteAddress = remoteAddress;
-    }
-
-    public boolean isOrphan(){
-        return remoteAddress==null;
-    }
 }

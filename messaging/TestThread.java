@@ -1,8 +1,8 @@
-package com.react.gabriel.wbam.padoc;
+package com.react.gabriel.wbam.padoc.messaging;
 
 import android.os.CountDownTimer;
 
-import com.react.gabriel.wbam.MainActivity;
+import com.react.gabriel.wbam.padoc.Padoc;
 
 /**
  * Created by gabriel on 08/06/16.
@@ -14,16 +14,15 @@ public class TestThread {
 //    private final int TICK_TIME = 2000;
 //    private final int TOTAL_TIME = 602000;
 
-    //120 messages per minute for 10 minutes
+    //120 messages per minute for 1 minutes
 //    private final int TICK_TIME = 2000;
     private final int TOTAL_TIME = 600000;
 
+    private Padoc padoc;
 
-    private PadocManager padocManager;
+    public TestThread(Padoc padoc){
 
-    public TestThread(PadocManager padocManager){
-
-        this.padocManager = padocManager;
+        this.padoc = padoc;
 
     }
 
@@ -35,11 +34,11 @@ public class TestThread {
                 new CountDownTimer(TOTAL_TIME + interval, interval) {
 
                     public void onTick(long millisUntilFinished) {
-                        padocManager.sendFLOOD();
+                        padoc.sendFLOOD("This is a flood");
                     }
 
                     public void onFinish() {
-                        padocManager.debugPrint("FLOOD TEST DONE");
+//                        padoc.print("FLOOD TEST DONE");
                     }
                 }.start();
 
@@ -49,11 +48,11 @@ public class TestThread {
                 new CountDownTimer(TOTAL_TIME + interval, interval) {
 
                     public void onTick(long millisUntilFinished) {
-                        padocManager.sendCBS();
+                        padoc.sendCBS("This is a CBS");
                     }
 
                     public void onFinish() {
-                        padocManager.debugPrint("CBS TEST DONE");
+//                        padoc.print("CBS TEST DONE");
                     }
                 }.start();
 
@@ -63,11 +62,11 @@ public class TestThread {
                 new CountDownTimer(TOTAL_TIME + interval, interval) {
 
                     public void onTick(long millisUntilFinished) {
-                        padocManager.sendROUTE(destination);
+                        padoc.sendMessage(destination, "This is a route");
                     }
 
                     public void onFinish() {
-                        padocManager.debugPrint("ROUTE TEST DONE");
+//                        padoc.print("ROUTE TEST DONE");
                     }
                 }.start();
 

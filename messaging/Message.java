@@ -1,6 +1,4 @@
-package com.react.gabriel.wbam.padoc;
-
-import com.react.gabriel.wbam.R;
+package com.react.gabriel.wbam.padoc.messaging;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -24,6 +22,7 @@ public class Message {
     //Type of content
     private static final String CONTENT = "content";
     private static final String CONTENT_ID = "content-id";
+    private static final String CONTENT_ID_FWD = "content-id-fwd";
     private static final String CONTENT_ID_OFFLINE = "content-id-offline";
     private static final String CONTENT_IDS = "content-ids";
     private static final String CONTENT_MSG = "content-msg";
@@ -50,7 +49,7 @@ public class Message {
     //TODO : maybe every JSON field should be declared as an Objet field, some finals, like the ID.
 
     public enum Type {
-        ROUTE_TEST_REQUEST, CBS_TEST_REQUEST, FLOOD_TEST_REQUEST, ACK_REQUEST, ACK, ID, ID_OFFLINE, IDS, MSG, PRIORITY;
+        ROUTE_TEST_REQUEST, CBS_TEST_REQUEST, FLOOD_TEST_REQUEST, ACK_REQUEST, ACK, ID, ID_FWD, ID_OFFLINE, IDS, MSG, PRIORITY;
     }
 
     public enum Algo {
@@ -83,6 +82,9 @@ public class Message {
             switch (type){
                 case ID:
                     jsonMsg.put(CONTENT, CONTENT_ID);
+                    break;
+                case ID_FWD:
+                    jsonMsg.put(CONTENT, CONTENT_ID_FWD);
                     break;
                 case ID_OFFLINE:
                     jsonMsg.put(CONTENT, CONTENT_ID_OFFLINE);
@@ -139,25 +141,42 @@ public class Message {
         return validJSONString;
     }
 
-    public static Message getIDMessage(String localAddress, String name, String mesh){
+    public static Message getIDMessage(String localAddress, String name){
+
+//        JSONObject jsonMessageContent = new JSONObject();
+//
+//        try {
+//
+//            jsonMessageContent.put(ADDRESS, localAddress);
+//            jsonMessageContent.put(NAME, name);
+////            jsonMessageContent.put(MESH, mesh);
+//
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
+
+        Message idMsg = new Message(Algo.ROUTE, Type.ID, name, localAddress, ALL, 0);
+
+        System.out.print("ID message is " + idMsg.toString().getBytes().length + " bytes");
+
+        return idMsg;
+    }
+
+    public static Message getIDFWDMessage(String localAddress, String newAddress, String newName){
 
         JSONObject jsonMessageContent = new JSONObject();
 
         try {
-
-            jsonMessageContent.put(ADDRESS, localAddress);
-            jsonMessageContent.put(NAME, name);
-            jsonMessageContent.put(MESH, mesh);
+            jsonMessageContent.put(ADDRESS, newAddress);
+            jsonMessageContent.put(NAME, newName);
 
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        Message idMsg = new Message(Algo.FLOOD, Type.ID, jsonMessageContent.toString(), localAddress, ALL, 0);
+        Message fwdIDmsg = new Message(Algo.ROUTE, Message.Type.ID_FWD, jsonMessageContent.toString(), localAddress, ALL, 1);
 
-        System.out.print("ID message is " + idMsg.toString().getBytes().length + " bytes");
-
-        return idMsg;
+        return fwdIDmsg;
     }
 
     public static Message getIDOfflineMessage(String localAddress, String offlineAddress){
@@ -193,6 +212,8 @@ public class Message {
         switch (content){
             case CONTENT_ID:
                 return Type.ID;
+            case CONTENT_ID_FWD:
+                return Type.ID_FWD;
             case CONTENT_ID_OFFLINE:
                 return Type.ID_OFFLINE;
             case CONTENT_IDS:
